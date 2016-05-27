@@ -4,4 +4,8 @@
     <string name="action_create">Create Chatroom</string>
     <string name="action_join">Join Chatroom</string>
     <string name="no_bluetooth">Your device does not support bluetooth. This app cannot be used.</string>
+    <string name="bluetooth_disabled_message">Bluetooth is off.</string>
+    <string name="bluetooth_enabled_message">Bluetooth is on.</string>
+    <string name="bluetooth_turning_off_message">Bluetooth is turning off.</string>
+    <string name="bluetooth_turning_on_message">Bluetooth is turning on.</string>
 </resources>
