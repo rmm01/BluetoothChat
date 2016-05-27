@@ -1,5 +1,6 @@
 package com.yckir.bluetoothchat;
 
+import android.bluetooth.BluetoothAdapter;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -11,9 +12,21 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
 
+    private BluetoothAdapter mBlueToothAdapter;
+    private boolean mBlueToothSupported;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mBlueToothAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBlueToothSupported = mBlueToothAdapter != null;
+        if(!mBlueToothSupported){
+            setContentView(R.layout.no_bluetooth);
+            return;
+        }
+
+
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -26,10 +39,14 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+
+
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        if(!mBlueToothSupported)
+            return false;
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
