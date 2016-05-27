@@ -1,27 +1,28 @@
 package com.yckir.bluetoothchat;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
+import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener {
+public class MainActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverReceiver.BlueToothDiscoverListener {
 
     private static final int REQUEST_ENABLE_BT = 1;
     private BluetoothAdapter mBlueToothAdapter;
     private boolean mBlueToothSupported;
     private TextView mTextView;
     private BluetoothStatusReceiver mBTStatusReceiver;
+    private BluetoothDiscoverReceiver mBTDiscoverReceiver;
 
 
     public void setBlueToothStatus(){
@@ -52,6 +53,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
         mBTStatusReceiver = new BluetoothStatusReceiver();
         mBTStatusReceiver.setListener(this);
 
+        mBTDiscoverReceiver = new BluetoothDiscoverReceiver();
+        mBTDiscoverReceiver.setListener(this);
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -75,6 +79,14 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
         // Register for broadcasts on BluetoothAdapter state change
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(mBTStatusReceiver, filter);
+
+        IntentFilter filter1 = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        IntentFilter filter2 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        IntentFilter filter3 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+
+        registerReceiver(mBTDiscoverReceiver, filter1);
+        registerReceiver(mBTDiscoverReceiver, filter2);
+        registerReceiver(mBTDiscoverReceiver, filter3);
     }
 
     @Override
@@ -85,6 +97,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
             return;
 
         unregisterReceiver(mBTStatusReceiver);
+        unregisterReceiver(mBTDiscoverReceiver);
     }
 
     @Override
@@ -115,6 +128,11 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
                 return true;
             //bluetooth is enabled, launch activity to join a chat room
         }
+        if(id == R.id.action_discover){
+            mBlueToothAdapter.startDiscovery();
+            //call cancelDiscovery() to stop it prematurely
+        }
+
 
         return super.onOptionsItemSelected(item);
     }
@@ -129,9 +147,11 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
         if(!mBlueToothAdapter.isEnabled()){
             menu.getItem(0).setEnabled(false);
             menu.getItem(1).setEnabled(false);
+            menu.getItem(2).setEnabled(false);
         }else{
             menu.getItem(0).setEnabled(true);
             menu.getItem(1).setEnabled(true);
+            menu.getItem(2).setEnabled(true);
         }
         return super.onPrepareOptionsMenu(menu);
     }
@@ -154,5 +174,20 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
     @Override
     public void bluetoothTurningOn() {
         mTextView.setText(R.string.bluetooth_turning_on_message);
+    }
+
+    @Override
+    public void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice) {
+        Log.v("DISCOVER", bluetoothDevice.getName() + ", " + bluetoothDevice.getAddress());
+    }
+
+    @Override
+    public void discoveryStarted() {
+        Log.v("DISCOVER", "Discover started");
+    }
+
+    @Override
+    public void discoveryFinished() {
+        Log.v("DISCOVER", "Discover finished");
     }
 }
