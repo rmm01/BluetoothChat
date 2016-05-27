@@ -1,0 +1,22 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto"
+      xmlns:tools="http://schemas.android.com/tools"
+      tools:context="com.yckir.bluetoothchat.MainActivity">
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never"/>
+    <item
+        android:id="@+id/action_create"
+        android:orderInCategory="100"
+        android:title="@string/action_create"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_join"
+        android:orderInCategory="100"
+        android:title="@string/action_join"
+        app:showAsAction="never"/>
+
+</menu>
