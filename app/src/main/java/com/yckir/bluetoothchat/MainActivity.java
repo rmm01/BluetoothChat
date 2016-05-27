@@ -15,39 +15,24 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener {
 
     private static final int REQUEST_ENABLE_BT = 1;
-
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-
-            if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-                final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
-                        BluetoothAdapter.ERROR);
-                switch (state) {
-                    case BluetoothAdapter.STATE_OFF:
-                        mTextView.setText(R.string.bluetooth_disabled_message);
-                        break;
-                    case BluetoothAdapter.STATE_TURNING_OFF:
-                        mTextView.setText(R.string.bluetooth_turning_off_message);
-                        break;
-                    case BluetoothAdapter.STATE_ON:
-                        mTextView.setText(R.string.bluetooth_enabled_message);
-                        break;
-                    case BluetoothAdapter.STATE_TURNING_ON:
-                        mTextView.setText(R.string.bluetooth_turning_on_message);
-                        break;
-                }
-            }
-        }
-    };
-
     private BluetoothAdapter mBlueToothAdapter;
     private boolean mBlueToothSupported;
     private TextView mTextView;
+    private BluetoothStatusReceiver mBTStatusReceiver;
+
+
+    public void setBlueToothStatus(){
+        if(!mBlueToothSupported){
+            mTextView.setText(R.string.no_bluetooth);
+        }else if(mBlueToothAdapter.isEnabled()){
+            bluetoothOn();
+        }else{
+            bluetoothOff();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,16 +44,13 @@ public class MainActivity extends AppCompatActivity {
         mBlueToothAdapter = BluetoothAdapter.getDefaultAdapter();
         mBlueToothSupported = mBlueToothAdapter != null;
 
-        if(!mBlueToothSupported){
-            mTextView.setText(R.string.no_bluetooth);
-            return;
-        }
+        setBlueToothStatus();
 
-        if(mBlueToothAdapter.isEnabled()){
-            mTextView.setText(R.string.bluetooth_enabled_message);
-        }else{
-            mTextView.setText(R.string.bluetooth_disabled_message);
-        }
+        if(!mBlueToothSupported)
+            return;
+
+        mBTStatusReceiver = new BluetoothStatusReceiver();
+        mBTStatusReceiver.setListener(this);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -81,23 +63,35 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
-
-        // Register for broadcasts on BluetoothAdapter state change
-        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-        registerReceiver(mReceiver, filter);
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    protected void onResume() {
+        super.onResume();
 
-        unregisterReceiver(mReceiver);
+        if(!mBlueToothSupported)
+            return;
+
+        // Register for broadcasts on BluetoothAdapter state change
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        registerReceiver(mBTStatusReceiver, filter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if(!mBlueToothSupported)
+            return;
+
+        unregisterReceiver(mBTStatusReceiver);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         if(!mBlueToothSupported)
             return false;
+
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
@@ -127,6 +121,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
+
+        if(!mBlueToothSupported)
+            return super.onPrepareOptionsMenu(menu);
+
         //if bluetooth is disabled then disable the buttons that require bluetooth
         if(!mBlueToothAdapter.isEnabled()){
             menu.getItem(0).setEnabled(false);
@@ -136,5 +134,25 @@ public class MainActivity extends AppCompatActivity {
             menu.getItem(1).setEnabled(true);
         }
         return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public void bluetoothOff() {
+        mTextView.setText(R.string.bluetooth_disabled_message);
+    }
+
+    @Override
+    public void bluetoothOn() {
+        mTextView.setText(R.string.bluetooth_enabled_message);
+    }
+
+    @Override
+    public void bluetoothTurningOff() {
+        mTextView.setText(R.string.bluetooth_turning_off_message);
+    }
+
+    @Override
+    public void bluetoothTurningOn() {
+        mTextView.setText(R.string.bluetooth_turning_on_message);
     }
 }
