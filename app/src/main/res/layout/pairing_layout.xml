@@ -51,7 +51,8 @@
         android:layout_marginRight="20dp"
         android:layout_alignBaseline="@id/enable_bt_label"
         android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"/>
+        android:layout_alignParentEnd="true"
+        android:checked="true"/>
 
     <TextView
         android:id="@+id/enable_discovery_label"
