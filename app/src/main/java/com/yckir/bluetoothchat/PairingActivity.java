@@ -70,6 +70,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         //set default state
         mBlueToothName.setText( mBluetoothAdapter.getName() );
+        mDiscoverableWheel.stopSpinning();
+        mFindDevicesWheel.stopSpinning();
         mBluetoothSwitch.setChecked(mBluetoothAdapter.isEnabled());
         enableBluetoothFields(mBluetoothAdapter.isEnabled());
 
