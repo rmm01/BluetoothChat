@@ -61,7 +61,8 @@
         android:layout_marginStart="20dp"
         android:layout_marginTop="20dp"
         android:layout_below="@id/enable_bt_label"
-        android:text="@string/enable_discover_label"/>
+        android:text="@string/enable_discover_label"
+        android:onClick="makeDiscoverable"/>
 
     <com.pnikosis.materialishprogress.ProgressWheel
         android:id="@+id/enable_discovery"
@@ -84,9 +85,11 @@
         android:layout_marginStart="20dp"
         android:layout_marginTop="20dp"
         android:layout_below="@id/enable_discovery_label"
-        android:text="@string/find_devices_prompt"/>
+        android:text="@string/find_devices_prompt"
+        android:onClick="findDevices"/>
 
     <com.pnikosis.materialishprogress.ProgressWheel
+        android:id="@+id/find_devices"
         android:layout_width="30dp"
         android:layout_height="30dp"
         android:layout_marginTop="20dp"
