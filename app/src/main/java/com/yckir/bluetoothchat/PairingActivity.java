@@ -1,7 +1,10 @@
 package com.yckir.bluetoothchat;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -15,7 +18,8 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
-        BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
+        BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
+        BluetoothDiscoverReceiver.BlueToothDiscoverListener {
 
     private TextView mBlueToothName;
     private TextView mDiscoverable;
@@ -27,6 +31,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
+    private BluetoothDiscoverReceiver mBTDReceiver = null;
 
     /**
      * Enables and disables the state of the fields depending on the parameter.
@@ -90,6 +95,12 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         else
             mDiscoverableWheel.stopSpinning();
 
+        //set the spinner progress bar to the correct state if the activity is coming from foreground
+        if(mBluetoothAdapter.isDiscovering())
+            mFindDevicesWheel.spin();
+        else
+            mFindDevicesWheel.stopSpinning();
+
         if(mBTStatusReceiver == null) {
             mBTStatusReceiver = new BluetoothStatusReceiver();
             mBTStatusReceiver.setListener(this);
@@ -98,6 +109,14 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mBTDStateReceiver = new BluetoothDiscoverStateReceiver();
             mBTDStateReceiver.setListener(this);
             registerReceiver(mBTDStateReceiver, BluetoothDiscoverStateReceiver.getIntentFilter());
+
+            mBTDReceiver = new BluetoothDiscoverReceiver();
+            mBTDReceiver.setListener(this);
+
+            IntentFilter[] filters = BluetoothDiscoverReceiver.getIntentFilters();
+            for(IntentFilter filter: filters ){
+                registerReceiver(mBTDReceiver, filter);
+            }
         }
     }
 
@@ -109,6 +128,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mBTStatusReceiver = null;
             unregisterReceiver(mBTDStateReceiver);
             mBTDStateReceiver = null;
+            unregisterReceiver(mBTDReceiver);
+            mBTDReceiver = null;
         }
     }
 
@@ -124,6 +145,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
     public void findDevices(View view) {
         Log.v("PAIR_ACTIVITY", "findDevices");
+        mBluetoothAdapter.startDiscovery();
     }
 
     @Override
@@ -189,5 +211,20 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void undiscoverable() {
         mDiscoverableWheel.stopSpinning();
+    }
+
+    @Override
+    public void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice) {
+       Toast.makeText(this, bluetoothDevice.getName() + ", " + bluetoothDevice.getAddress(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void discoveryStarted() {
+        mFindDevicesWheel.spin();
+    }
+
+    @Override
+    public void discoveryFinished() {
+        mFindDevicesWheel.stopSpinning();
     }
 }
