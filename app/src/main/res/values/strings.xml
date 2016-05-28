@@ -10,4 +10,11 @@
     <string name="bluetooth_turning_on_message">Bluetooth is turning on.</string>
     <string name="action_find_devices">Find Devices</string>
     <string name="action_enable_discovery">Enable discovery</string>
+    <string name="pairing_message">Pair all devices to each other</string>
+    <string name="bluetooth_name_label">Your bluetooth name</string>
+    <string name="enable_bluetooth_label">Enable Bluetooth</string>
+    <string name="enable_discover_label">Tap to make this device discoverable</string>
+    <string name="find_devices_prompt">Tap to find local devices</string>
+    <string name="paired_devices_label">Paired devices</string>
+    <string name="found_devices_label">Found devices</string>
 </resources>
