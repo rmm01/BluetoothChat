@@ -26,6 +26,13 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
 
+    /**
+     * Enables and disables the state of the fields depending on the parameter.
+     * This function checks if the state of any of the fields matches the parameter.
+     * This allows this function to return quickly when the state and parameter are the same.
+     *
+     * @param enabled true if fields should be enabled, false if they should be disabled.
+     */
     private void enableBluetoothFields(boolean enabled){
 
         //if one of the fields is enabled and the parameter is the same, do nothing since state is already correct
