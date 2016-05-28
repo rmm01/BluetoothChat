@@ -3,6 +3,7 @@ package com.yckir.bluetoothchat;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -14,21 +15,21 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverReceiver.BlueToothDiscoverListener {
+public class MainActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener,
+        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
 
     private static final int REQUEST_ENABLE_BT = 1;
     private BluetoothAdapter mBlueToothAdapter;
-    private boolean mBlueToothSupported;
     private TextView mTextView;
     private BluetoothStatusReceiver mBTStatusReceiver;
     private BluetoothDiscoverReceiver mBTDiscoverReceiver;
+    private BluetoothDiscoverStateReceiver mBTDStateReceiver;
 
 
     public void setBlueToothStatus(){
-        if(!mBlueToothSupported){
-            mTextView.setText(R.string.no_bluetooth);
-        }else if(mBlueToothAdapter.isEnabled()){
+        if(mBlueToothAdapter.isEnabled()){
             bluetoothOn();
         }else{
             bluetoothOff();
@@ -43,18 +44,22 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
         mTextView = (TextView) findViewById(R.id.message);
 
         mBlueToothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mBlueToothSupported = mBlueToothAdapter != null;
+        if (mBlueToothAdapter == null) {
+            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
         setBlueToothStatus();
-
-        if(!mBlueToothSupported)
-            return;
 
         mBTStatusReceiver = new BluetoothStatusReceiver();
         mBTStatusReceiver.setListener(this);
 
         mBTDiscoverReceiver = new BluetoothDiscoverReceiver();
         mBTDiscoverReceiver.setListener(this);
+
+        mBTDStateReceiver = new BluetoothDiscoverStateReceiver();
+        mBTDStateReceiver.setListener(this);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -70,40 +75,34 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-
-        if(!mBlueToothSupported)
-            return;
+    protected void onStart() {
+        super.onStart();
 
         // Register for broadcasts on BluetoothAdapter state change
-        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-        registerReceiver(mBTStatusReceiver, filter);
 
-        IntentFilter filter1 = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        IntentFilter filter2 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-        IntentFilter filter3 = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        registerReceiver(mBTStatusReceiver, BluetoothStatusReceiver.getIntentFilter());
 
-        registerReceiver(mBTDiscoverReceiver, filter1);
-        registerReceiver(mBTDiscoverReceiver, filter2);
-        registerReceiver(mBTDiscoverReceiver, filter3);
+        registerReceiver(mBTDStateReceiver, BluetoothDiscoverStateReceiver.getIntentFilter());
+
+        IntentFilter[] filters = BluetoothDiscoverReceiver.getIntentFilters();
+        for(IntentFilter filter: filters ){
+            registerReceiver(mBTDiscoverReceiver, filter);
+        }
+
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-
-        if(!mBlueToothSupported)
-            return;
+    protected void onStop() {
+        super.onStop();
 
         unregisterReceiver(mBTStatusReceiver);
+        unregisterReceiver(mBTDStateReceiver);
         unregisterReceiver(mBTDiscoverReceiver);
+
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        if(!mBlueToothSupported)
-            return false;
 
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -132,6 +131,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
             mBlueToothAdapter.startDiscovery();
             //call cancelDiscovery() to stop it prematurely
         }
+        if(id == R.id.action_enable_discovery){
+            Intent discoverableIntent = new
+                    Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 20);
+            startActivity(discoverableIntent);
+        }
 
 
         return super.onOptionsItemSelected(item);
@@ -139,9 +144,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-
-        if(!mBlueToothSupported)
-            return super.onPrepareOptionsMenu(menu);
 
         //if bluetooth is disabled then disable the buttons that require bluetooth
         if(!mBlueToothAdapter.isEnabled()){
@@ -189,5 +191,15 @@ public class MainActivity extends AppCompatActivity implements BluetoothStatusRe
     @Override
     public void discoveryFinished() {
         Log.v("DISCOVER", "Discover finished");
+    }
+
+    @Override
+    public void discoverable() {
+        Log.v("Discoverable", "is discoverable");
+    }
+
+    @Override
+    public void undiscoverable() {
+        Log.v("Discoverable", "is not discoverable");
     }
 }

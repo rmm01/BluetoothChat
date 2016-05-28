@@ -9,4 +9,5 @@
     <string name="bluetooth_turning_off_message">Bluetooth is turning off.</string>
     <string name="bluetooth_turning_on_message">Bluetooth is turning on.</string>
     <string name="action_find_devices">Find Devices</string>
+    <string name="action_enable_discovery">Enable discovery</string>
 </resources>
