@@ -14,7 +14,8 @@ import android.widget.Toast;
 
 import com.pnikosis.materialishprogress.ProgressWheel;
 
-public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener, BluetoothStatusReceiver.BlueToothStatusListener {
+public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
+        BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
 
     private TextView mBlueToothName;
     private TextView mDiscoverable;
@@ -25,6 +26,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private BluetoothAdapter mBluetoothAdapter;
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
+    private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
 
     /**
      * Enables and disables the state of the fields depending on the parameter.
@@ -44,9 +46,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         if(!enabled) {
             mDiscoverableWheel.stopSpinning();
             mFindDevicesWheel.stopSpinning();
-        }else{
-            mDiscoverableWheel.spin();
-            mFindDevicesWheel.spin();
         }
     }
 
@@ -87,6 +86,10 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mBTStatusReceiver = new BluetoothStatusReceiver();
             mBTStatusReceiver.setListener(this);
             registerReceiver(mBTStatusReceiver, BluetoothStatusReceiver.getIntentFilter());
+
+            mBTDStateReceiver = new BluetoothDiscoverStateReceiver();
+            mBTDStateReceiver.setListener(this);
+            registerReceiver(mBTDStateReceiver, BluetoothDiscoverStateReceiver.getIntentFilter());
         }
     }
 
@@ -96,11 +99,19 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         if(mBTStatusReceiver != null) {
             unregisterReceiver(mBTStatusReceiver);
             mBTStatusReceiver = null;
+            unregisterReceiver(mBTDStateReceiver);
+            mBTDStateReceiver = null;
         }
     }
 
     public void makeDiscoverable(View view){
         Log.v("PAIR_ACTIVITY", "makeDiscoverable");
+        if(mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+            Intent discoverableIntent = new
+                    Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
+            startActivity(discoverableIntent);
+        }
     }
 
     public void findDevices(View view) {
@@ -160,5 +171,15 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mBluetoothSwitch.setChecked(true);
         mBluetoothSwitch.setEnabled(false);
         enableBluetoothFields(false);
+    }
+
+    @Override
+    public void discoverable() {
+        mDiscoverableWheel.spin();
+    }
+
+    @Override
+    public void undiscoverable() {
+        mDiscoverableWheel.stopSpinning();
     }
 }
