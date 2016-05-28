@@ -84,6 +84,12 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         mBluetoothSwitch.setChecked(mBluetoothAdapter.isEnabled());
 
+        //set the spinner progress bar to the correct state if the activity is coming from foreground
+        if(mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)
+            mDiscoverableWheel.spin();
+        else
+            mDiscoverableWheel.stopSpinning();
+
         if(mBTStatusReceiver == null) {
             mBTStatusReceiver = new BluetoothStatusReceiver();
             mBTStatusReceiver.setListener(this);
