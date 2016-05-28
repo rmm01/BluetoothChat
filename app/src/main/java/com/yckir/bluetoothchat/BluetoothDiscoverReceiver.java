@@ -7,7 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
+import android.content.IntentFilter;
 
 public class BluetoothDiscoverReceiver extends BroadcastReceiver{
 
@@ -21,6 +21,14 @@ public class BluetoothDiscoverReceiver extends BroadcastReceiver{
 
     public void setListener(BlueToothDiscoverListener listener){
         mListener = listener;
+    }
+
+    public static IntentFilter[] getIntentFilters(){
+        IntentFilter[] filters = new IntentFilter[3];
+        filters[0] = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        filters[1] = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        filters[2] = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        return filters;
     }
 
     @Override

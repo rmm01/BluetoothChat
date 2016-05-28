@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 
 public class BluetoothStatusReceiver extends BroadcastReceiver{
 
@@ -19,6 +20,10 @@ public class BluetoothStatusReceiver extends BroadcastReceiver{
 
     public void setListener(BlueToothStatusListener listener){
         mListener = listener;
+    }
+
+    public static IntentFilter getIntentFilter(){
+        return new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
     }
 
     @Override
