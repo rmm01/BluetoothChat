@@ -41,11 +41,12 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private RecyclerView mPairedRecyclerView;
     private BluetoothPairAdapter mPairedAdapter;
     private RecyclerView mFoundRecyclerView;
+    private BluetoothFoundAdapter mFoundAdapter;
 
     private void updatePairs(){
-        ArrayList<String> namesList = new ArrayList<>(10);
-        ArrayList<String> addressesList = new ArrayList<>(10);
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        ArrayList<String> namesList = new ArrayList<>(pairedDevices.size());
+        ArrayList<String> addressesList = new ArrayList<>(pairedDevices.size());
         if (pairedDevices.size() > 0) {
             // Loop through paired devices
             for (BluetoothDevice device : pairedDevices) {
@@ -72,13 +73,15 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         mDiscoverable.setEnabled(enabled);
         mFindDevices.setEnabled(enabled);
+
         if(enabled) {
             updatePairs();
             mPairedRecyclerView.setVisibility(View.VISIBLE);
-        }else
+            mFoundRecyclerView.setVisibility(View.VISIBLE);
+        }else {
             mPairedRecyclerView.setVisibility(View.INVISIBLE);
-
-        if(!enabled) {
+            mFoundRecyclerView.setVisibility(View.INVISIBLE);
+            mFoundAdapter.clearData();
             mDiscoverableWheel.stopSpinning();
             mFindDevicesWheel.stopSpinning();
         }
@@ -122,6 +125,13 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mPairedAdapter = new BluetoothPairAdapter(namesList, addressesList);
         mPairedRecyclerView.setAdapter(mPairedAdapter);
         mPairedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        mFoundRecyclerView = (RecyclerView)findViewById(R.id.found_devices_recycler_view);
+        if(mFoundRecyclerView != null)
+            mFoundRecyclerView.setHasFixedSize(true);
+        mFoundAdapter = new BluetoothFoundAdapter();
+        mFoundRecyclerView.setAdapter(mFoundAdapter);
+        mFoundRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //set default state
         mBlueToothName.setText( mBluetoothAdapter.getName() );
@@ -195,8 +205,11 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
     public void findDevices(View view) {
         Log.v("PAIR_ACTIVITY", "findDevices");
-        mBluetoothAdapter.startDiscovery();
+        if(mBluetoothAdapter.isDiscovering())
+            return;
+        mFoundAdapter.clearData();
         updatePairs();
+        mBluetoothAdapter.startDiscovery();
     }
 
     @Override
@@ -267,6 +280,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice) {
        Toast.makeText(this, bluetoothDevice.getName() + ", " + bluetoothDevice.getAddress(), Toast.LENGTH_SHORT).show();
+        if(!mPairedAdapter.contains(bluetoothDevice.getAddress()))
+            mFoundAdapter.addItem(bluetoothDevice.getName(), bluetoothDevice.getAddress());
     }
 
     @Override
