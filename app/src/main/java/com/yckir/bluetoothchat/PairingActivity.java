@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.View;
@@ -16,6 +18,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pnikosis.materialishprogress.ProgressWheel;
+
+import java.util.ArrayList;
+import java.util.Set;
 
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
         BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
@@ -33,6 +38,25 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
     private BluetoothDiscoverReceiver mBTDReceiver = null;
 
+    private RecyclerView mPairedRecyclerView;
+    private BluetoothPairAdapter mPairedAdapter;
+    private RecyclerView mFoundRecyclerView;
+
+    private void updatePairs(){
+        ArrayList<String> namesList = new ArrayList<>(10);
+        ArrayList<String> addressesList = new ArrayList<>(10);
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        if (pairedDevices.size() > 0) {
+            // Loop through paired devices
+            for (BluetoothDevice device : pairedDevices) {
+                namesList.add( device.getName() );
+                addressesList.add( device.getAddress() );
+            }
+        }
+
+        mPairedAdapter.updateItems(namesList, addressesList);
+    }
+
     /**
      * Enables and disables the state of the fields depending on the parameter.
      * This function checks if the state of any of the fields matches the parameter.
@@ -48,6 +72,12 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         mDiscoverable.setEnabled(enabled);
         mFindDevices.setEnabled(enabled);
+        if(enabled) {
+            updatePairs();
+            mPairedRecyclerView.setVisibility(View.VISIBLE);
+        }else
+            mPairedRecyclerView.setVisibility(View.INVISIBLE);
+
         if(!enabled) {
             mDiscoverableWheel.stopSpinning();
             mFindDevicesWheel.stopSpinning();
@@ -59,6 +89,13 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         super.onCreate(savedInstanceState);
         setContentView(R.layout.pairing_layout);
 
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
         mBlueToothName = (TextView)findViewById(R.id.bluetooth_name);
         mDiscoverable = (TextView)findViewById(R.id.enable_discovery_label);
         mFindDevices = (TextView)findViewById(R.id.find_devices_prompt);
@@ -66,12 +103,25 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mDiscoverableWheel = (ProgressWheel)findViewById(R.id.enable_discovery);
         mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
-            finish();
-            return;
+
+        ArrayList<String> namesList = new ArrayList<>(10);
+        ArrayList<String> addressesList = new ArrayList<>(10);
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        if (pairedDevices.size() > 0) {
+            // Loop through paired devices
+            for (BluetoothDevice device : pairedDevices) {
+                namesList.add( device.getName() );
+                addressesList.add( device.getAddress() );
+            }
         }
+
+        mPairedRecyclerView = (RecyclerView) findViewById(R.id.paired_devices_recycler_view);
+
+        if(mPairedRecyclerView != null)
+            mPairedRecyclerView.setHasFixedSize(true);
+        mPairedAdapter = new BluetoothPairAdapter(namesList, addressesList);
+        mPairedRecyclerView.setAdapter(mPairedAdapter);
+        mPairedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //set default state
         mBlueToothName.setText( mBluetoothAdapter.getName() );
@@ -146,6 +196,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     public void findDevices(View view) {
         Log.v("PAIR_ACTIVITY", "findDevices");
         mBluetoothAdapter.startDiscovery();
+        updatePairs();
     }
 
     @Override
