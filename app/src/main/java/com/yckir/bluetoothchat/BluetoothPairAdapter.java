@@ -62,7 +62,13 @@ public class BluetoothPairAdapter extends RecyclerView.Adapter<BluetoothPairAdap
     public void addItem(String name, String address){
         mNamesList.add(name);
         mAddressesList.add(address);
-        notifyItemInserted(mNamesList.size() - 1);
+        notifyDataSetChanged();
+    }
+
+    public boolean contains(String address){
+        if(mAddressesList == null)
+            return false;
+        return mAddressesList.contains(address);
     }
 
     public class PairViewHolder extends RecyclerView.ViewHolder {
