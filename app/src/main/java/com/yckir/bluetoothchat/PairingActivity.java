@@ -24,7 +24,7 @@ import java.util.Set;
 
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
         BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
-        BluetoothDiscoverReceiver.BlueToothDiscoverListener {
+        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothFoundAdapter.BTF_ClickListener {
 
     private TextView mBlueToothName;
     private TextView mDiscoverable;
@@ -130,6 +130,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         if(mFoundRecyclerView != null)
             mFoundRecyclerView.setHasFixedSize(true);
         mFoundAdapter = new BluetoothFoundAdapter();
+        mFoundAdapter.setRecyclerItemListener(this);
         mFoundRecyclerView.setAdapter(mFoundAdapter);
         mFoundRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -292,5 +293,10 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void discoveryFinished() {
         mFindDevicesWheel.stopSpinning();
+    }
+
+    @Override
+    public void BTF_ItemClick(String name, String address) {
+        Toast.makeText(this, "Pair " +name + ", " + address, Toast.LENGTH_SHORT).show();
     }
 }

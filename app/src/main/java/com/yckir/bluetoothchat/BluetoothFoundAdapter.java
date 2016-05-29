@@ -5,7 +5,6 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -14,10 +13,15 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
 
     private ArrayList<String> mNamesList;
     private ArrayList<String> mAddressesList;
+    private BTF_ClickListener mListener = null;
 
     public BluetoothFoundAdapter(){
         mNamesList = new ArrayList<>(10);
         mAddressesList = new ArrayList<>(10);
+    }
+
+    public void setRecyclerItemListener( BTF_ClickListener listener){
+        mListener = listener;
     }
 
     @Override
@@ -55,17 +59,26 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
         notifyDataSetChanged();
     }
 
+    public interface BTF_ClickListener{
+        void BTF_ItemClick(String name, String address);
 
-    public class MyViewHolder extends RecyclerView.ViewHolder {
+    }
+
+    public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         public TextView mNameTextView;
         public TextView mAddressTextView;
-        public Button mPairButton;
 
         public MyViewHolder(View view) {
             super(view);
             mNameTextView = (TextView) view.findViewById(R.id.vh_name);
             mAddressTextView = (TextView) view.findViewById(R.id.vh_address);
-            mPairButton = (Button) view.findViewById(R.id.vh_pair_button);
+            view.setOnClickListener(this);
+        }
+
+        @Override
+        public void onClick(View v) {
+            if(mListener != null)
+                mListener.BTF_ItemClick(mNameTextView.getText().toString(), mAddressTextView.getText().toString());
         }
     }
 }
