@@ -21,6 +21,8 @@ import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
+import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
+import com.yckir.bluetoothchat.recyle_adapters.BluetoothPairAdapter;
 
 import java.util.ArrayList;
 import java.util.Set;

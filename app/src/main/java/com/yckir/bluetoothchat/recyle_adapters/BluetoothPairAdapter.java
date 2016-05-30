@@ -1,4 +1,4 @@
-package com.yckir.bluetoothchat;
+package com.yckir.bluetoothchat.recyle_adapters;
 
 
 import android.bluetooth.BluetoothDevice;
@@ -7,6 +7,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import com.yckir.bluetoothchat.R;
 
 import java.util.ArrayList;
 
