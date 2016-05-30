@@ -18,6 +18,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pnikosis.materialishprogress.ProgressWheel;
+import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
+import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
+import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -44,6 +47,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private BluetoothFoundAdapter mFoundAdapter;
 
     private ServerAcceptTask mServerTask = null;
+    private ClientConnectTask mClientTask = null;
 
     private ArrayList<BluetoothDevice> getPairs(){
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();

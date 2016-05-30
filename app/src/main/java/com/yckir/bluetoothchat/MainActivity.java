@@ -17,6 +17,10 @@ import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
+import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
+import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
+
 public class MainActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener,
         BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
 

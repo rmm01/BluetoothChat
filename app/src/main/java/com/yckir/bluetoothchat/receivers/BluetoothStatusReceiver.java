@@ -1,4 +1,4 @@
-package com.yckir.bluetoothchat;
+package com.yckir.bluetoothchat.receivers;
 
 
 import android.bluetooth.BluetoothAdapter;
