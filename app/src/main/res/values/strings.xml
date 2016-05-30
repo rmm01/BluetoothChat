@@ -17,4 +17,6 @@
     <string name="find_devices_prompt">Tap to find local devices</string>
     <string name="paired_devices_label">Paired devices</string>
     <string name="found_devices_label">Found devices</string>
+    <string name="accepted_clients_label">Accepted clients</string>
+    <string name="found_clients_label">Found clients</string>
 </resources>
