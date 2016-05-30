@@ -1,4 +1,4 @@
-package com.yckir.bluetoothchat;
+package com.yckir.bluetoothchat.activities;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
@@ -18,6 +18,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pnikosis.materialishprogress.ProgressWheel;
+import com.yckir.bluetoothchat.ClientConnectTask;
+import com.yckir.bluetoothchat.R;
+import com.yckir.bluetoothchat.ServerAcceptTask;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
