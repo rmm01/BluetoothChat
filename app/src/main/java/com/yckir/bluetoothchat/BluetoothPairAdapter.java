@@ -1,6 +1,7 @@
 package com.yckir.bluetoothchat;
 
 
+import android.bluetooth.BluetoothDevice;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,12 +12,13 @@ import java.util.ArrayList;
 
 public class BluetoothPairAdapter extends RecyclerView.Adapter<BluetoothPairAdapter.PairViewHolder>{
 
-    private ArrayList<String> mNamesList;
-    private ArrayList<String> mAddressesList;
+    ArrayList<BluetoothDevice> mDevices;
 
-    public BluetoothPairAdapter(ArrayList<String> names, ArrayList<String> addresses){
-        mNamesList = names;
-        mAddressesList = addresses;
+    public BluetoothPairAdapter(ArrayList<BluetoothDevice> devices){
+        if(devices == null)
+            throw new IllegalArgumentException("parameter cannot be null");
+
+        mDevices = devices;
     }
 
 
@@ -30,45 +32,39 @@ public class BluetoothPairAdapter extends RecyclerView.Adapter<BluetoothPairAdap
 
     @Override
     public void onBindViewHolder(PairViewHolder holder, int position) {
-        if(mNamesList == null || mNamesList.isEmpty())
+        if(mDevices.isEmpty())
             return;
-        holder.mNameTextView.setText(mNamesList.get(position));
-        holder.mAddressTextView.setText(mAddressesList.get(position));
+        holder.mNameTextView.setText(mDevices.get(position).getName());
+        holder.mAddressTextView.setText(mDevices.get(position).getAddress());
     }
 
     @Override
     public int getItemCount() {
-        if(mNamesList == null)
-            return 0;
-        return mNamesList.size();
+        return mDevices.size();
     }
 
-    public void updateItems(ArrayList<String> names, ArrayList<String> addresses){
+    public void updateItems(ArrayList<BluetoothDevice> devices){
+        if(devices == null)
+            throw new IllegalArgumentException("parameter is null");
 
-        if(mNamesList.size() != names.size()) {
-            mNamesList = names;
-            mAddressesList = addresses;
-            notifyDataSetChanged();
-            return;
-        }
-
-        if(!mAddressesList.containsAll(addresses)){
-            mNamesList = names;
-            mAddressesList = addresses;
-            notifyDataSetChanged();
-        }
+        mDevices = devices;
+        notifyDataSetChanged();
     }
 
-    public void addItem(String name, String address){
-        mNamesList.add(name);
-        mAddressesList.add(address);
+    public void addItem(BluetoothDevice device){
+        if(device == null)
+            throw new IllegalArgumentException("parameter is null");
+
+        mDevices.add(device);
         notifyDataSetChanged();
     }
 
     public boolean contains(String address){
-        if(mAddressesList == null)
-            return false;
-        return mAddressesList.contains(address);
+        for (BluetoothDevice i: mDevices) {
+            if(i.getAddress().equals(address))
+                return true;
+        }
+        return false;
     }
 
     public class PairViewHolder extends RecyclerView.ViewHolder {

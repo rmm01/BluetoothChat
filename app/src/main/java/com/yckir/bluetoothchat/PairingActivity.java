@@ -43,19 +43,18 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private RecyclerView mFoundRecyclerView;
     private BluetoothFoundAdapter mFoundAdapter;
 
-    private void updatePairs(){
+    private ServerAcceptTask mServerTask = null;
+
+    private ArrayList<BluetoothDevice> getPairs(){
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        ArrayList<String> namesList = new ArrayList<>(pairedDevices.size());
-        ArrayList<String> addressesList = new ArrayList<>(pairedDevices.size());
+        ArrayList<BluetoothDevice> devices = new ArrayList<>(pairedDevices.size());
         if (pairedDevices.size() > 0) {
             // Loop through paired devices
             for (BluetoothDevice device : pairedDevices) {
-                namesList.add( device.getName() );
-                addressesList.add( device.getAddress() );
+                devices.add( device );
             }
         }
-
-        mPairedAdapter.updateItems(namesList, addressesList);
+        return devices;
     }
 
     /**
@@ -75,7 +74,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mFindDevices.setEnabled(enabled);
 
         if(enabled) {
-            updatePairs();
+            mPairedAdapter.updateItems(getPairs());
             mPairedRecyclerView.setVisibility(View.VISIBLE);
             mFoundRecyclerView.setVisibility(View.VISIBLE);
         }else {
@@ -106,23 +105,11 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mDiscoverableWheel = (ProgressWheel)findViewById(R.id.enable_discovery);
         mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
 
-
-        ArrayList<String> namesList = new ArrayList<>(10);
-        ArrayList<String> addressesList = new ArrayList<>(10);
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        if (pairedDevices.size() > 0) {
-            // Loop through paired devices
-            for (BluetoothDevice device : pairedDevices) {
-                namesList.add( device.getName() );
-                addressesList.add( device.getAddress() );
-            }
-        }
-
         mPairedRecyclerView = (RecyclerView) findViewById(R.id.paired_devices_recycler_view);
 
         if(mPairedRecyclerView != null)
             mPairedRecyclerView.setHasFixedSize(true);
-        mPairedAdapter = new BluetoothPairAdapter(namesList, addressesList);
+        mPairedAdapter = new BluetoothPairAdapter(getPairs());
         mPairedRecyclerView.setAdapter(mPairedAdapter);
         mPairedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -209,7 +196,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         if(mBluetoothAdapter.isDiscovering())
             return;
         mFoundAdapter.clearData();
-        updatePairs();
+        mPairedAdapter.updateItems(getPairs());
         mBluetoothAdapter.startDiscovery();
     }
 
