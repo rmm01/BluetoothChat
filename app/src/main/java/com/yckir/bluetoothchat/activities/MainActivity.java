@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity{
         }
         if (id == R.id.action_join) {
             if(mBlueToothAdapter.isEnabled()) {
+                startActivity(new Intent(this, PairingActivity.class));
                 return true;
             }
             //bluetooth is enabled, launch activity to join a chat room
