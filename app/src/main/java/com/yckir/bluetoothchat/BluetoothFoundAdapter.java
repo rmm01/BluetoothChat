@@ -1,6 +1,7 @@
 package com.yckir.bluetoothchat;
 
 
+import android.bluetooth.BluetoothDevice;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,14 +11,11 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAdapter.MyViewHolder>{
-
-    private ArrayList<String> mNamesList;
-    private ArrayList<String> mAddressesList;
+    ArrayList<BluetoothDevice> mDevices;
     private BTF_ClickListener mListener = null;
 
     public BluetoothFoundAdapter(){
-        mNamesList = new ArrayList<>(10);
-        mAddressesList = new ArrayList<>(10);
+        mDevices = new ArrayList<>(10);
     }
 
     public void setRecyclerItemListener( BTF_ClickListener listener){
@@ -34,28 +32,26 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
 
     @Override
     public void onBindViewHolder(MyViewHolder holder, int position) {
-        if(mNamesList == null || mNamesList.isEmpty())
+        if(mDevices.isEmpty())
             return;
-        holder.mNameTextView.setText(mNamesList.get(position));
-        holder.mAddressTextView.setText(mAddressesList.get(position));
+        holder.mNameTextView.setText(mDevices.get(position).getName());
+        holder.mAddressTextView.setText(mDevices.get(position).getAddress());
     }
 
     @Override
     public int getItemCount() {
-        if(mNamesList == null)
-            return 0;
-        return mNamesList.size();
+        return mDevices.size();
     }
 
     public void clearData(){
-        mNamesList.clear();
-        mAddressesList.clear();
+        mDevices.clear();
         notifyDataSetChanged();
     }
 
-    public void addItem(String name, String address){
-        mNamesList.add(name);
-        mAddressesList.add(address);
+    public void addItem(BluetoothDevice device){
+        if(device == null)
+            throw new IllegalArgumentException("parameter cannot be null");
+        mDevices.add(device);
         notifyDataSetChanged();
     }
 

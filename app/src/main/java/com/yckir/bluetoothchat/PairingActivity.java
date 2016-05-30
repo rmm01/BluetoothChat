@@ -269,7 +269,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     public void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice) {
        Toast.makeText(this, bluetoothDevice.getName() + ", " + bluetoothDevice.getAddress(), Toast.LENGTH_SHORT).show();
         if(!mPairedAdapter.contains(bluetoothDevice.getAddress()))
-            mFoundAdapter.addItem(bluetoothDevice.getName(), bluetoothDevice.getAddress());
+            mFoundAdapter.addItem(bluetoothDevice);
     }
 
     @Override
