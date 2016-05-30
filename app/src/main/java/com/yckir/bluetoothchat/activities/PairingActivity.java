@@ -20,7 +20,7 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.ClientConnectTask;
 import com.yckir.bluetoothchat.R;
-import com.yckir.bluetoothchat.ServerAcceptTask;
+import com.yckir.bluetoothchat.Utility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
@@ -50,7 +50,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private RecyclerView mFoundRecyclerView;
     private BluetoothFoundAdapter mFoundAdapter;
 
-    private ServerAcceptTask mServerTask = null;
     private ClientConnectTask mClientTask = null;
 
     private ArrayList<BluetoothDevice> getPairs(){
@@ -119,6 +118,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mPairedRecyclerView.setHasFixedSize(true);
         mPairedAdapter = new BluetoothFoundAdapter();
         mPairedAdapter.updateItems(getPairs());
+        mPairedAdapter.setRecyclerItemListener(this);
         mPairedRecyclerView.setAdapter(mPairedAdapter);
         mPairedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -293,6 +293,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
     @Override
     public void BTF_ItemClick(BluetoothDevice device) {
-        Toast.makeText(this, "Pair " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Attempting to connect with " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
+        mClientTask = new ClientConnectTask(device, Utility.getBTChatUUID());
+        mClientTask.execute();
     }
 }
