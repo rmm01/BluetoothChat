@@ -13,6 +13,7 @@ import com.yckir.bluetoothchat.R;
 import java.util.ArrayList;
 
 public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAdapter.MyViewHolder>{
+
     ArrayList<BluetoothDevice> mDevices;
     private BTF_ClickListener mListener = null;
 
@@ -55,6 +56,22 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
             throw new IllegalArgumentException("parameter cannot be null");
         mDevices.add(device);
         notifyDataSetChanged();
+    }
+
+    public void updateItems(ArrayList<BluetoothDevice> devices){
+        if(devices == null)
+            throw new IllegalArgumentException("parameter is null");
+
+        mDevices = devices;
+        notifyDataSetChanged();
+    }
+
+    public boolean contains(String address){
+        for (BluetoothDevice i: mDevices) {
+            if(i.getAddress().equals(address))
+                return true;
+        }
+        return false;
     }
 
     public interface BTF_ClickListener{

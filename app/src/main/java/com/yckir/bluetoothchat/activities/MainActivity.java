@@ -60,20 +60,15 @@ public class MainActivity extends AppCompatActivity{
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_create) {
             if(mBlueToothAdapter.isEnabled()) {
                 startActivity(new Intent(this, SetupServerActivity.class));
                 return true;
             }
-            //bluetooth is enabled, launch activity to create a chat room
         }
         if (id == R.id.action_join) {
-            if(mBlueToothAdapter.isEnabled()) {
-                startActivity(new Intent(this, PairingActivity.class));
-                return true;
-            }
-            //bluetooth is enabled, launch activity to join a chat room
+            startActivity(new Intent(this, PairingActivity.class));
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
