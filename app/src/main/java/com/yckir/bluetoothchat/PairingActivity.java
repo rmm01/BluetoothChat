@@ -283,7 +283,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     }
 
     @Override
-    public void BTF_ItemClick(String name, String address) {
-        Toast.makeText(this, "Pair " +name + ", " + address, Toast.LENGTH_SHORT).show();
+    public void BTF_ItemClick(BluetoothDevice device) {
+        Toast.makeText(this, "Pair " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
     }
 }

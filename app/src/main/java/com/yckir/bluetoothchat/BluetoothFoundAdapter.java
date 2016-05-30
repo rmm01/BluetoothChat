@@ -56,8 +56,7 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
     }
 
     public interface BTF_ClickListener{
-        void BTF_ItemClick(String name, String address);
-
+        void BTF_ItemClick(BluetoothDevice device);
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -74,7 +73,7 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
         @Override
         public void onClick(View v) {
             if(mListener != null)
-                mListener.BTF_ItemClick(mNameTextView.getText().toString(), mAddressTextView.getText().toString());
+                mListener.BTF_ItemClick(mDevices.get(getAdapterPosition()));
         }
     }
 }
