@@ -13,13 +13,24 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.yckir.bluetoothchat.R;
+import com.yckir.bluetoothchat.ServerAcceptTask;
+import com.yckir.bluetoothchat.Utility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
 import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
 
-public class SetupServerActivity extends AppCompatActivity implements BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
+/**
+ * Sets up the server for the bluetooth chat. The activity will exit if bluetooth is ever off.
+ * If the user ever denies a request to become discoverable, the activity will exit. The Server will
+ * stop if the activity goes to onStop or no longer becomes discoverable. Has a broadcast receiver
+ * for bluetooth state changes and discoverability state changes. Receivers registered and
+ * unregistered in onStart and onStop.
+ */
+public class SetupServerActivity extends AppCompatActivity implements BlueToothStatusListener,
+        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
 
+    private static final String TAG = "SetupServer";
     private static final int DISCOVERY_DURATION = 180;
 
     //used to ensure that a request is not sent while one is being sent
@@ -35,6 +46,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
+
+    private ServerAcceptTask mServerTask = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -90,11 +103,20 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     protected void onResume() {
         super.onResume();
 
-        //recheck if bluetooth is off because we unregister listeners after onStop,
-        //state could have changed while activity was in background and had no listeners
+        //since receivers are unregistered when activity goes into background, need to ensure that
+        //the device is in the proper state
+
+        //make sure that bluetooth is enabled
         if( !mBluetoothAdapter.isEnabled() ) {
             bluetoothOff();
         }
+
+        //make sure that the server is started if currently discoverable
+        if(mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+            startServer();
+        }
+
+        //make sure that currently discoverable
         makeDiscoverable();
     }
 
@@ -102,6 +124,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     protected void onStop() {
         super.onStop();
 
+        //stop server if going into background
+        stopServer();
+
+        //unregister all receivers
         if(mBTStatusReceiver != null) {
             unregisterReceiver(mBTStatusReceiver);
             mBTStatusReceiver = null;
@@ -113,24 +139,37 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        // request code and result code should both be equal to the duration of discovery if successful
         if(requestCode == DISCOVERY_DURATION) {
             mRequestingDiscoverable = false;
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, "server must be discoverable", Toast.LENGTH_LONG).show();
                 finish();
+            }else if(resultCode ==  DISCOVERY_DURATION) {
+                // if discovery is happening, then start the server
+                startServer();
+            }else{
+                Log.e(TAG, "unknown result code: " + resultCode);
             }
+        }else{
+            Log.e(TAG, "unknown request code: " + requestCode);
         }
     }
 
+    /**
+     * make a request to make device discoverable, onActivityResult will have the result.
+     */
     public void makeDiscoverable(){
         //corner case where turning off bluetooth also makes device undiscoverable
         //this will cause activity to finish and also request to make device discoverable
         if(!mBluetoothAdapter.isEnabled())
             return;
 
-        Log.v("PAIR_ACTIVITY", "makeDiscoverable");
+
         if(mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE
                 && !mRequestingDiscoverable) {
+
+            Log.v(TAG, "makeDiscoverable");
 
             mRequestingDiscoverable = true;
             Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
@@ -139,9 +178,33 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
     }
 
+    /**
+     * start the server if not already running
+     */
+    public void startServer() {
+        if(mServerTask == null) {
+            Log.v(TAG, "startServer");
+            mServerTask = new ServerAcceptTask(mBluetoothAdapter, Utility.getBTChatUUID(), Utility.SDP_NAME);
+            mServerTask.execute();
+        }
+    }
+
+    /**
+     * stop the server if running
+     */
+    public void stopServer() {
+        if(mServerTask != null) {
+            Log.v(TAG, "stopServer");
+            mServerTask.cancel(true);
+            mServerTask.cancelServer();
+            mServerTask = null;
+        }
+    }
+
     @Override
     public void bluetoothOff() {
         Toast.makeText(this, "bluetooth off, server has shutdown", Toast.LENGTH_LONG).show();
+        stopServer();
         finish();
     }
 
@@ -159,11 +222,11 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     @Override
     public void discoverable() {
-
     }
 
     @Override
     public void undiscoverable() {
+         stopServer();
          makeDiscoverable();
     }
 }
