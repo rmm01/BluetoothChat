@@ -3,6 +3,7 @@ package com.yckir.bluetoothchat.activities;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
@@ -31,7 +32,7 @@ import java.util.Set;
 
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
         BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
-        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothFoundAdapter.BTF_ClickListener {
+        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothFoundAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
 
     private TextView mBlueToothName;
     private TextView mDiscoverable;
@@ -295,6 +296,16 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     public void BTF_ItemClick(BluetoothDevice device) {
         Toast.makeText(this, "Attempting to connect with " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
         mClientTask = new ClientConnectTask(device, Utility.getBTChatUUID());
+        mClientTask.setListener(this);
         mClientTask.execute();
+    }
+
+    @Override
+    public void serverSearchFinished(boolean found, BluetoothSocket socket) {
+        if(found){
+            Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
+        }else{
+            Toast.makeText(PairingActivity.this, "Could not connect to server", Toast.LENGTH_SHORT).show();
+        }
     }
 }

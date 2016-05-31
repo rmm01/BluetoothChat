@@ -12,6 +12,7 @@ public class ClientConnectTask extends AsyncTask<Void, Void, BluetoothSocket>{
     private static final String TAG = "ClientConnectTask";
 
     private BluetoothSocket mClientSocket;
+    private ClientEventListener mListener = null;
 
     public ClientConnectTask(BluetoothDevice device, UUID uuid){
         BluetoothSocket tmp = null;
@@ -23,6 +24,10 @@ public class ClientConnectTask extends AsyncTask<Void, Void, BluetoothSocket>{
         }
 
         mClientSocket = tmp;
+    }
+
+    public void setListener(ClientEventListener listener){
+        mListener = listener;
     }
 
     @Override
@@ -46,10 +51,14 @@ public class ClientConnectTask extends AsyncTask<Void, Void, BluetoothSocket>{
 
     @Override
     protected void onPostExecute(BluetoothSocket socket) {
-        if(socket != null)
+        if(socket != null) {
             Log.v(TAG, "socket ready for communication");
-        else {
+            if(mListener!= null)
+                mListener.serverSearchFinished(true, socket);
+        }else {
             Log.v(TAG, "socket not available for communication");
+            if(mListener!= null)
+                mListener.serverSearchFinished(false, null);
         }
     }
 
@@ -62,5 +71,15 @@ public class ClientConnectTask extends AsyncTask<Void, Void, BluetoothSocket>{
             Log.v(TAG, "could not close socket");
             e1.printStackTrace();
         }
+    }
+
+    public interface ClientEventListener{
+        /**
+         * The Search for the server has compleated or timed out
+         *
+         * @param found true if the server was found, false otherwise
+         * @param socket socket that connected to server, null if found is false
+         */
+        void serverSearchFinished(boolean found, BluetoothSocket socket);
     }
 }
