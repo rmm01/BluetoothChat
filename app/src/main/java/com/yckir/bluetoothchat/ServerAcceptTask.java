@@ -14,6 +14,7 @@ public class ServerAcceptTask extends AsyncTask<Void, BluetoothSocket, Void>{
 
     private BluetoothServerSocket mServerSocket;
     private BluetoothAdapter mBluetoothAdapter;
+    private ServerEventListener mListener = null;
 
     public ServerAcceptTask(BluetoothAdapter adapter,UUID uuid, String sdpName){
         mBluetoothAdapter = adapter;
@@ -28,6 +29,10 @@ public class ServerAcceptTask extends AsyncTask<Void, BluetoothSocket, Void>{
         }
 
         mServerSocket = tmp;
+    }
+
+    public void setListener(ServerEventListener listener){
+        mListener = listener;
     }
 
     @Override
@@ -64,6 +69,9 @@ public class ServerAcceptTask extends AsyncTask<Void, BluetoothSocket, Void>{
     @Override
     protected void onProgressUpdate(BluetoothSocket... values) {
         Log.v(TAG, "socket ready for communication");
+        if(mListener != null)
+            mListener.foundClient(values[0]);
+
     }
 
     public void cancelServer() {
@@ -80,5 +88,9 @@ public class ServerAcceptTask extends AsyncTask<Void, BluetoothSocket, Void>{
     @Override
     protected void onCancelled() {
         Log.v(TAG, "onCancelled");
+    }
+
+    public interface ServerEventListener{
+        void foundClient( BluetoothSocket clientSocket);
     }
 }

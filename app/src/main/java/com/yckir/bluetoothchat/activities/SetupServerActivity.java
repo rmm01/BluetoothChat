@@ -2,6 +2,8 @@ package com.yckir.bluetoothchat.activities;
 
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -18,7 +20,7 @@ import com.yckir.bluetoothchat.Utility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
-import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
+import com.yckir.bluetoothchat.recyle_adapters.BluetoothSocketAdapter;
 
 /**
  * Sets up the server for the bluetooth chat. The activity will exit if bluetooth is ever off.
@@ -28,7 +30,7 @@ import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
  * unregistered in onStart and onStop.
  */
 public class SetupServerActivity extends AppCompatActivity implements BlueToothStatusListener,
-        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener {
+        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener, ServerAcceptTask.ServerEventListener, BluetoothSocketAdapter.BTF_ClickListener {
 
     private static final String TAG = "SetupServer";
     private static final int DISCOVERY_DURATION = 180;
@@ -41,8 +43,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private TextView mBlueToothName;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
-    private BluetoothFoundAdapter mConnectedAdapter;
-    private BluetoothFoundAdapter mUnconnectedAdapter;
+    private BluetoothSocketAdapter mConnectedAdapter;
+    private BluetoothSocketAdapter mUnconnectedAdapter;
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
@@ -72,14 +74,16 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
         if(mConnectedRecyclerView != null)
             mConnectedRecyclerView.setHasFixedSize(true);
-        mConnectedAdapter = new BluetoothFoundAdapter();
+        mConnectedAdapter = new BluetoothSocketAdapter();
+        mConnectedAdapter.setRecyclerItemListener(this);
         mConnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mConnectedRecyclerView.setAdapter(mConnectedAdapter);
 
         mUnconnectedRecyclerView = (RecyclerView)findViewById(R.id.unconnected_devices_recycler_view);
         if(mUnconnectedRecyclerView != null)
             mUnconnectedRecyclerView.setHasFixedSize(true);
-        mUnconnectedAdapter = new BluetoothFoundAdapter();
+        mUnconnectedAdapter = new BluetoothSocketAdapter();
+        mUnconnectedAdapter.setRecyclerItemListener(this);
         mUnconnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mUnconnectedRecyclerView.setAdapter(mUnconnectedAdapter);
     }
@@ -185,6 +189,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         if(mServerTask == null) {
             Log.v(TAG, "startServer");
             mServerTask = new ServerAcceptTask(mBluetoothAdapter, Utility.getBTChatUUID(), Utility.SDP_NAME);
+            mServerTask.setListener(this);
             mServerTask.execute();
         }
     }
@@ -228,5 +233,15 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     public void undiscoverable() {
          stopServer();
          makeDiscoverable();
+    }
+
+    @Override
+    public void foundClient(BluetoothSocket clientSocket) {
+        mUnconnectedAdapter.addItem(clientSocket.getRemoteDevice(), clientSocket);
+    }
+
+    @Override
+    public void BTF_ItemClick(BluetoothDevice device, BluetoothSocket socket) {
+
     }
 }
