@@ -19,4 +19,5 @@
     <string name="found_devices_label">Found devices</string>
     <string name="accepted_clients_label">Accepted clients</string>
     <string name="found_clients_label">Found clients</string>
+    <string name="title_activity_chatroom">ChatroomActivity</string>
 </resources>

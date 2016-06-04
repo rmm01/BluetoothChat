@@ -20,18 +20,28 @@
 
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-
         </activity>
         <activity
             android:name=".activities.PairingActivity"
             android:theme="@style/AppTheme.NoActionBar">
         </activity>
-
         <activity
             android:name=".activities.SetupServerActivity"
             android:theme="@style/AppTheme.NoActionBar">
         </activity>
-
+        <activity
+            android:name=".activities.ChatroomActivity"
+            android:label="@string/title_activity_chatroom"
+            android:theme="@style/AppTheme.NoActionBar">
+        </activity>
+        <service
+            android:name=".services.BluetoothReadService"
+            android:exported="false">
+        </service>
+        <service
+            android:name=".services.BluetoothWriteService"
+            android:exported="false">
+        </service>
     </application>
 
 </manifest>

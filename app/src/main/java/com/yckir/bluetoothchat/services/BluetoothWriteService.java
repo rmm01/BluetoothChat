@@ -79,6 +79,12 @@ public class BluetoothWriteService extends IntentService {
 
         String action = intent.getAction();
 
+        if(action == null){
+            Log.v(TAG, "null action");
+            return;
+        }
+
+
         switch (action){
             case Utility.ACTION_SEND_DISPLAY_TEXT:
                 String message = intent.getStringExtra(Utility.EXTRA_SEND_DISPLAY_TEXT);

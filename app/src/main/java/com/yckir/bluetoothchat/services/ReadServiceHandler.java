@@ -29,7 +29,7 @@ public class ReadServiceHandler extends Handler {
         String message = new String(byte_message);
 
         String message_id = (message.substring(0,4));
-        message = message.substring(4);
+        message = message.substring(4,size);
 
         Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
 

@@ -4,9 +4,12 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -26,6 +29,9 @@ import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
+import com.yckir.bluetoothchat.services.BluetoothReadService;
+import com.yckir.bluetoothchat.services.BluetoothWriteService;
+import com.yckir.bluetoothchat.services.ReadServiceHandler;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -33,6 +39,8 @@ import java.util.Set;
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
         BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
         BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothFoundAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
+
+    private static final String TAG = "PairingActivity";
 
     private TextView mBlueToothName;
     private TextView mDiscoverable;
@@ -52,6 +60,48 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private BluetoothFoundAdapter mFoundAdapter;
 
     private ClientConnectTask mClientTask = null;
+
+    private BluetoothSocket mSelectedSocket;
+    private BluetoothWriteService.WriteBinder mWriteBinder;
+    private BluetoothReadService.ReadBinder mReadBinder;
+
+    private boolean mWriteConnected;
+    private boolean mReadConnected;
+
+    ServiceConnection mWriteConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.v(TAG, "WriteConnection connected" );
+            mWriteConnected = true;
+            mWriteBinder = (BluetoothWriteService.WriteBinder ) service;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.v(TAG, "WriteConnection disconnected" );
+            mWriteConnected = false;
+            mWriteBinder = null;
+        }
+    };
+
+    ServiceConnection mReadConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.v(TAG, "ReadConnection connected" );
+            mReadConnected = true;
+            mReadBinder = (BluetoothReadService.ReadBinder ) service;
+            //we are not using the handler in this activity, this will
+            //be used later
+            mReadBinder.setHandler(new ReadServiceHandler());
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.v(TAG, "ReadConnection disconnected" );
+            mReadConnected = false;
+            mReadBinder = null;
+        }
+    };
 
     private ArrayList<BluetoothDevice> getPairs(){
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
@@ -139,6 +189,11 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         enableBluetoothFields(mBluetoothAdapter.isEnabled());
 
         mBluetoothSwitch.setOnCheckedChangeListener(this);
+
+        Intent write = new Intent(this, BluetoothWriteService.class);
+        Intent read = new Intent(this, BluetoothReadService.class);
+        bindService(write,mWriteConnection ,BIND_AUTO_CREATE);
+        bindService(read,mReadConnection , BIND_AUTO_CREATE);
     }
 
     @Override
@@ -189,6 +244,21 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             unregisterReceiver(mBTDReceiver);
             mBTDReceiver = null;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(mReadConnected)
+            unbindService(mReadConnection);
+        if(mWriteConnected)
+            unbindService(mWriteConnection);
+
+        //on onServiceDisconnected may not be called since we are disconnecting gracefully.
+        mReadConnected = false;
+        mWriteConnected = false;
+        mReadBinder = null;
+        mWriteBinder = null;
     }
 
     public void makeDiscoverable(View view){
@@ -304,8 +374,19 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     public void serverSearchFinished(boolean found, BluetoothSocket socket) {
         if(found){
             Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
+
+            if(!mReadConnected || !mWriteConnected) {
+                Log.e(TAG, "not connected to read or write service when a server is found");
+                return;
+            }
+
+            mSelectedSocket = socket;
+            mWriteBinder.setSocket(mSelectedSocket);
+            mReadBinder.setSocket(mSelectedSocket);
+            startActivity(new Intent(PairingActivity.this, ChatroomActivity.class));
+
         }else{
-            Toast.makeText(PairingActivity.this, "Could not connect to server", Toast.LENGTH_SHORT).show();
+            Toast.makeText(PairingActivity.this, "Could not connect to server, try again", Toast.LENGTH_SHORT).show();
         }
     }
 }
