@@ -3,15 +3,12 @@ package com.yckir.bluetoothchat.services;
 
 import android.app.IntentService;
 import android.bluetooth.BluetoothSocket;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
-
-import com.yckir.bluetoothchat.Utility;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -21,6 +18,9 @@ import java.io.OutputStream;
  * one at a time on a separate thread.
  */
 public class BluetoothWriteService extends IntentService {
+
+    public static final String ACTION_SEND_MESSAGE = "ACTION_SEND_MESSAGE";
+    public static final String EXTRA_MESSAGE = "EXTRA_MESSAGE";
 
     private static final String TAG = "WriteService";
     private BluetoothSocket mSocket;
@@ -33,35 +33,18 @@ public class BluetoothWriteService extends IntentService {
     }
 
     /**
-     * handles merging the parameters into a message that will be sent.
-     * @param displayText the text that will be sent
+     * handles sending the message to the bluetooth clients.
+     *
+     * @param message the text that will be sent
      */
-    private void handleActionSendMessage(String displayText){
-        String data = Utility.ID_SEND_DISPLAY_TEXT + displayText;
-        byte[] bytes = data.getBytes();
+    private void handleActionSendMessage(String message){
+        byte[] bytes = message.getBytes();
         try {
             mOutStream.write(bytes);
         } catch (IOException e) {
+            Log.v(TAG, "Could not write message : " + message);
             e.printStackTrace();
-            Log.v(TAG, "Could not write message : " + data);
         }
-    }
-
-    /**
-     * Send text that will be displayed on the connected devices.
-     * Sends an intent to the service that requests the message be sent using the bluetooth socket.
-     *
-     * @param context app context
-     * @param message the message to be sent using socket.
-     */
-    public static void sendDisplayText(Context context, String message){
-        Log.v(TAG, "startActionWrite");
-
-        Intent intent = new Intent(context, BluetoothWriteService.class);
-        intent.setAction(Utility.ACTION_SEND_DISPLAY_TEXT);
-        intent.putExtra(Utility.EXTRA_SEND_DISPLAY_TEXT, message);
-
-        context.startService(intent);
     }
 
     @Override
@@ -86,16 +69,14 @@ public class BluetoothWriteService extends IntentService {
 
 
         switch (action){
-            case Utility.ACTION_SEND_DISPLAY_TEXT:
-                String message = intent.getStringExtra(Utility.EXTRA_SEND_DISPLAY_TEXT);
+            case ACTION_SEND_MESSAGE:
+                String message = intent.getStringExtra(EXTRA_MESSAGE);
                 handleActionSendMessage(message);
                 break;
             default:
                 Log.v(TAG,"unknown action " + action);
                 break;
         }
-
-
     }
 
     @Nullable

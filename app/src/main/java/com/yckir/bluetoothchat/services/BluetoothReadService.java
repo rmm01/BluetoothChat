@@ -4,6 +4,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.Nullable;
@@ -25,7 +26,7 @@ public class BluetoothReadService extends Service {
     private Thread mReadingThread;
 
     //handler to be able to communicate with the a client on the main thread;
-    ReadServiceHandler mHandler;
+    Handler mHandler;
 
     @Override
     public void onCreate() {
@@ -208,7 +209,7 @@ public class BluetoothReadService extends Service {
         /**
          * @return get the handler that was given from setHandler, null otherwise
          */
-        public ReadServiceHandler getHandler(){
+        public Handler getHandler(){
             return mHandler;
         }
 

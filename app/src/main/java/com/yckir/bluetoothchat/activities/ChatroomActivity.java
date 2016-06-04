@@ -13,9 +13,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.yckir.bluetoothchat.R;
+import com.yckir.bluetoothchat.Utility;
 import com.yckir.bluetoothchat.services.BluetoothReadService;
 import com.yckir.bluetoothchat.services.BluetoothWriteService;
 import com.yckir.bluetoothchat.services.ReadServiceHandler;
@@ -55,7 +55,7 @@ public class ChatroomActivity extends AppCompatActivity implements ReadServiceHa
             Log.v(TAG, "ReadConnection connected" );
             mReadConnected = true;
             mReadBinder = (BluetoothReadService.ReadBinder) service;
-            mHandler = mReadBinder.getHandler();
+            mHandler = (ReadServiceHandler) mReadBinder.getHandler();
             mReadBinder.startReading();
             mHandler.setListener(ChatroomActivity.this);
         }
@@ -85,7 +85,7 @@ public class ChatroomActivity extends AppCompatActivity implements ReadServiceHa
                     Snackbar.make(view, "sending message", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                     String text = mEditText.getText().toString();
-                    BluetoothWriteService.sendDisplayText(ChatroomActivity.this, text);
+                    Utility.sendDisplayText(ChatroomActivity.this, text);
                     mTextView.append("\n-----YOU\n" + text + "\n-----\n");
 
                 }
