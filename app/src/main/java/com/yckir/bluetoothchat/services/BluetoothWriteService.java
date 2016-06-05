@@ -18,6 +18,8 @@ import java.io.OutputStream;
  * one at a time on a separate thread.
  */
 public class BluetoothWriteService extends IntentService {
+    //TODO constantly check the other end of the bluetooth socket if no communication has happened in a set amount of time
+    //TODO implement a way to cancel the connection if no hello reply is received after 7 seconds
 
     public static final String ACTION_SEND_MESSAGE = "ACTION_SEND_MESSAGE";
     public static final String EXTRA_MESSAGE = "EXTRA_MESSAGE";

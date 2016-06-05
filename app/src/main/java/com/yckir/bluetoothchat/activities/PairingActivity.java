@@ -92,7 +92,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mReadBinder = (BluetoothReadService.ReadBinder ) service;
             //we are not using the handler in this activity, this will
             //be used later
-            mReadBinder.setHandler(new ReadServiceHandler());
+            mReadBinder.setHandler(new ReadServiceHandler(PairingActivity.this));
         }
 
         @Override
