@@ -49,16 +49,16 @@ public class ServerAcceptTask extends AsyncTask<Void, BluetoothSocket, Void>{
             }
             if(clientSocket != null){
                 Log.v(TAG, "got a client");
-                try {
-                    mServerSocket.close();
-                } catch (IOException e) {
-                    Log.v(TAG, "could not close client");
-                    e.printStackTrace();
-                }
                 publishProgress(clientSocket);
-                break;
             }
 
+        }
+
+        try {
+            mServerSocket.close();
+        } catch (IOException e) {
+            Log.v(TAG, "could not close client");
+            e.printStackTrace();
         }
 
         Log.v(TAG,"I have been canceled");

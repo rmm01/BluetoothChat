@@ -12,10 +12,11 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 
 /**
  * Class that handles write requests using a bluetooth socket. Uses IntentService that handles request
- * one at a time on a separate thread.
+ * one at a time on a separate thread provided by using IntentService.
  */
 public class BluetoothWriteService extends IntentService {
     //TODO constantly check the other end of the bluetooth socket if no communication has happened in a set amount of time
@@ -25,33 +26,41 @@ public class BluetoothWriteService extends IntentService {
     public static final String EXTRA_MESSAGE = "EXTRA_MESSAGE";
 
     private static final String TAG = "WriteService";
-    private BluetoothSocket mSocket;
-    private OutputStream mOutStream;
     private WriteBinder mBinder;
+
+    private ArrayList<BluetoothSocket> mSockets;
+    private ArrayList<OutputStream> mOutputStreams;
 
     public BluetoothWriteService() {
         super(TAG);
         mBinder = new WriteBinder();
+        mOutputStreams = new ArrayList<>(4);
+        mSockets = new ArrayList<>(4);
     }
 
     /**
-     * handles sending the message to the bluetooth clients.
+     * handles sending the message to the all bluetooth clients.
      *
-     * @param message the text that will be sent
+     * @param message the message that will be sent
      */
     private void handleActionSendMessage(String message){
         byte[] bytes = message.getBytes();
-        try {
-            mOutStream.write(bytes);
-        } catch (IOException e) {
-            Log.v(TAG, "Could not write message : " + message);
-            e.printStackTrace();
+
+        OutputStream tmpOut;
+        for(int i = 0; i < mOutputStreams.size(); i++){
+            tmpOut = mOutputStreams.get(i);
+            try {
+                tmpOut.write(bytes);
+            } catch (IOException e) {
+                Log.v(TAG, "Could not write message : " + message + ", to socket number " + i);
+                e.printStackTrace();
+            }
         }
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        if(mSocket == null){
+        if(mSockets.size() == 0){
             Log.v(TAG, "onHandleIntent no socket");
             return;
         }
@@ -106,12 +115,13 @@ public class BluetoothWriteService extends IntentService {
      */
     public class WriteBinder extends Binder {
         /**
+         * Adds a bluetooth socket to use for communication.
+         *
          * @param socket the bluetooth socket used to communicate with another device
          * @return true false if an OutputStream could not be retrieved from the socket.
          */
-        public boolean setSocket(@NonNull BluetoothSocket socket){
-
-            Log.v(TAG, "socket set");
+        public boolean addSocket(@NonNull BluetoothSocket socket){
+            Log.v(TAG, "adding socket");
 
             OutputStream tmpOut;
 
@@ -122,17 +132,8 @@ public class BluetoothWriteService extends IntentService {
                 return false;
             }
 
-            if(mOutStream != null){
-                try {
-                    mOutStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.w(TAG, "could not close the socket before switching");
-                }
-            }
-
-            mSocket = socket;
-            mOutStream = tmpOut;
+            mOutputStreams.add(tmpOut);
+            mSockets.add(socket);
             return true;
         }
     }

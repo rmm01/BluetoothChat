@@ -12,34 +12,66 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 public class BluetoothReadService extends Service {
     private static final String TAG = "ReadService";
-    private BluetoothSocket mSocket;
-    private InputStream mInStream;
+
+    private ArrayList<InputStream> mInputStreams;
+    private ArrayList<BluetoothSocket> mSockets;
+    private ArrayList<Thread> mReadingThreads;
+
     private ReadBinder mBinder;
 
     //indicates that the user is currently reading
     private boolean mReading;
 
-    //access to reading thread so we can stop it.
-    private Thread mReadingThread;
-
     //handler to be able to communicate with the a client on the main thread;
     Handler mHandler;
+
+
+    private Thread getReadThread(final InputStream inputStream){
+        return new Thread(){
+            @Override
+            public void run() {
+
+                byte[] buffer = new byte[1024];
+                int numBytes;
+
+
+                while(!isInterrupted()){
+
+                    try {
+                        numBytes = inputStream.read(buffer);
+                        Message m = mHandler.obtainMessage(0, numBytes, -1, buffer);
+                        mHandler.sendMessage(m);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+                Log.v(TAG,"finishing thread");
+                mReading = false;
+
+            }
+        };
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.v(TAG, "onCreate");
         mBinder = new ReadBinder();
+        mSockets = new ArrayList<>(4);
+        mInputStreams = new ArrayList<>(4);
+        mReadingThreads = new ArrayList<>(4);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         //this method will not be used, the bulk of the service involves the binder object
 
-        if(mSocket == null) {
+        if(mSockets.size() == 0) {
             Log.v(TAG, "onStartCommand not enabled");
             return START_NOT_STICKY;
         }
@@ -72,9 +104,15 @@ public class BluetoothReadService extends Service {
     @Override
     public void onDestroy() {
         Log.v(TAG, "onDestroy");
-        if(mReading)
-            mReadingThread.interrupt();
-        mSocket = null;
+        if(mReading){
+            for(int i = 0; i < mReadingThreads.size(); i++){
+                mReadingThreads.get(i).interrupt();
+            }
+        }
+
+        mSockets = null;
+        mInputStreams = null;
+        mReadingThreads = null;
         mHandler = null;
         super.onDestroy();
     }
@@ -95,45 +133,19 @@ public class BluetoothReadService extends Service {
          * @return false if socket was being used to read or input stream could not be retrieved
          * from the socket, true otherwise
          */
-        public boolean setSocket(BluetoothSocket socket){
-            if(mReading){
-                return false;
-            }
-
-            InputStream tmpOut;
+        public boolean addSocket(BluetoothSocket socket){
+            Log.v(TAG, "adding socket");
+            InputStream tmpIn;
 
             try {
-                tmpOut = socket.getInputStream();
+                tmpIn = socket.getInputStream();
             }catch (IOException e){
-                Log.v(TAG, "could not get input stream from socket");
-                e.printStackTrace();
+                Log.e(TAG, "Could not get input stream form socket");
                 return false;
             }
 
-            if(mInStream != null){
-                try {
-                    mInStream.close();
-                } catch (IOException e) {
-                    Log.v(TAG, "could not close input stream from setSocket");
-                }
-            }
-
-
-            mInStream = tmpOut;
-            mSocket = socket;
-
-            return true;
-        }
-
-        /**
-         * remove the socket. This can only be done if not currently reading.
-         *
-         * @return false if socket not removed because socket was being used to read. true otherwise.
-         */
-        public boolean removeSocket(){
-            if(mReading)
-                return false;
-            mSocket = null;
+            mInputStreams.add(tmpIn);
+            mSockets.add(socket);
             return true;
         }
 
@@ -150,37 +162,18 @@ public class BluetoothReadService extends Service {
          * @return false if already reading or socket is null, true otherwise.
          */
         public boolean startReading(){
-            if(mReading || mSocket == null|| mHandler == null)
+            if(mReading || mSockets.size() == 0 || mHandler == null)
                 return false;
             mReading = true;
 
-            mReadingThread = new Thread(){
-                @Override
-                public void run() {
+            Thread tempThread;
+            for(int i = 0; i < mInputStreams.size(); i++){
+                tempThread = getReadThread( mInputStreams.get(i) );
+                mReadingThreads.add( tempThread );
+                tempThread.start();
+            }
 
-                    byte[] buffer = new byte[1024];
-                    int numBytes;
-
-
-                    while(!isInterrupted()){
-
-                        try {
-                            numBytes = mInStream.read(buffer);
-                            Message m = mHandler.obtainMessage(0, numBytes, -1, buffer);
-                            mHandler.sendMessage(m);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            break;
-                        }
-                    }
-                    Log.v(TAG,"finishing thread");
-                    mReading = false;
-
-                }
-            };
-            mReadingThread.start();
             return true;
-
         }
 
         /**
@@ -189,10 +182,12 @@ public class BluetoothReadService extends Service {
          * @return false if not reading or socket not set. true if was reading and is stopping.
          */
         public boolean stopReading(){
-            if(!mReading || mSocket == null)
+            if(!mReading || mSockets.size() == 0)
                 return false;
 
-            mReadingThread.interrupt();
+            for(int i = 0; i < mReadingThreads.size(); i++){
+                mReadingThreads.get(i).interrupt();
+            }
             mReading = false;
             return true;
         }
@@ -214,5 +209,4 @@ public class BluetoothReadService extends Service {
         }
 
     }
-
 }

@@ -16,6 +16,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -356,13 +357,16 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
 
         mSelectedSocket = clientSocket;
-        mWriteBinder.setSocket(mSelectedSocket);
-        mReadBinder.setSocket(mSelectedSocket);
-        startActivity(new Intent(SetupServerActivity.this, ChatroomActivity.class));
+        mWriteBinder.addSocket(mSelectedSocket);
+        mReadBinder.addSocket(mSelectedSocket);
     }
 
     @Override
     public void BTF_ItemClick(BluetoothDevice device, BluetoothSocket socket) {
 
+    }
+
+    public void startServer(View view){
+        startActivity(new Intent(SetupServerActivity.this, ChatroomActivity.class));
     }
 }

@@ -422,8 +422,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             }
 
             mSelectedSocket = socket;
-            mWriteBinder.setSocket(mSelectedSocket);
-            mReadBinder.setSocket(mSelectedSocket);
+            mWriteBinder.addSocket(mSelectedSocket);
+            mReadBinder.addSocket(mSelectedSocket);
             startActivity(new Intent(PairingActivity.this, ChatroomActivity.class));
 
         }else{
