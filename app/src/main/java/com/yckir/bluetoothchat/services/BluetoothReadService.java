@@ -202,7 +202,7 @@ public class BluetoothReadService extends Service {
          *
          * @param handler handler for ui thread
          */
-        public void setHandler(ReadServiceHandler handler){
+        public void setHandler(Handler handler){
             mHandler = handler;
         }
 

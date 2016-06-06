@@ -9,7 +9,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -31,8 +33,8 @@ import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
 import com.yckir.bluetoothchat.services.BluetoothReadService;
 import com.yckir.bluetoothchat.services.BluetoothWriteService;
-import com.yckir.bluetoothchat.services.ReadServiceHandler;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -65,10 +67,47 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private BluetoothWriteService.WriteBinder mWriteBinder;
     private BluetoothReadService.ReadBinder mReadBinder;
 
+    private MyReadHandler mHandler;
+
+    private static class MyReadHandler extends Handler{
+
+        private final WeakReference<PairingActivity> mActivity;
+
+        public MyReadHandler(PairingActivity activity){
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+
+            int size = msg.arg1;
+            byte[] byte_message = (byte[]) msg.obj;
+
+            String message = new String(byte_message);
+
+            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
+            message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
+
+            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
+
+            switch (message_id){
+                case Utility.ID_HELLO:
+                    Utility.sendReplyHelloMessage(mActivity.get());
+                    break;
+                case Utility.ID_HELLO_REPLY:
+                    //TODO cancel timeout check once timeout has been implemented
+                    break;
+                default:
+                    Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
+                    break;
+            }
+        }
+    }
+
     private boolean mWriteConnected;
     private boolean mReadConnected;
 
-    ServiceConnection mWriteConnection = new ServiceConnection() {
+    private ServiceConnection mWriteConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.v(TAG, "WriteConnection connected" );
@@ -84,7 +123,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         }
     };
 
-    ServiceConnection mReadConnection = new ServiceConnection() {
+    private ServiceConnection mReadConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.v(TAG, "ReadConnection connected" );
@@ -92,7 +131,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mReadBinder = (BluetoothReadService.ReadBinder ) service;
             //we are not using the handler in this activity, this will
             //be used later
-            mReadBinder.setHandler(new ReadServiceHandler(PairingActivity.this));
+            mReadBinder.setHandler(mHandler);
         }
 
         @Override
@@ -189,6 +228,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         enableBluetoothFields(mBluetoothAdapter.isEnabled());
 
         mBluetoothSwitch.setOnCheckedChangeListener(this);
+
+        mHandler = new MyReadHandler(this);
 
         Intent write = new Intent(this, BluetoothWriteService.class);
         Intent read = new Intent(this, BluetoothReadService.class);

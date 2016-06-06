@@ -4,7 +4,9 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -18,9 +20,10 @@ import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.Utility;
 import com.yckir.bluetoothchat.services.BluetoothReadService;
 import com.yckir.bluetoothchat.services.BluetoothWriteService;
-import com.yckir.bluetoothchat.services.ReadServiceHandler;
 
-public class ChatroomActivity extends AppCompatActivity implements ReadServiceHandler.MessageListener {
+import java.lang.ref.WeakReference;
+
+public class ChatroomActivity extends AppCompatActivity {
 
     private static final String TAG = "ChatroomActivity";
 
@@ -30,7 +33,46 @@ public class ChatroomActivity extends AppCompatActivity implements ReadServiceHa
     private boolean mReadConnected;
     private BluetoothReadService.ReadBinder mReadBinder;
     private BluetoothWriteService.WriteBinder mWriteBinder;
-    private ReadServiceHandler mHandler;
+
+    private MyReadHandler mHandler;
+
+    private static class MyReadHandler extends Handler {
+
+        private final WeakReference<ChatroomActivity> mActivity;
+
+        public MyReadHandler(ChatroomActivity activity){
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+
+            int size = msg.arg1;
+            byte[] byte_message = (byte[]) msg.obj;
+
+            String message = new String(byte_message);
+
+            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
+            message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
+
+            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
+
+            switch (message_id){
+                case Utility.ID_SEND_DISPLAY_TEXT:
+                    mActivity.get().showMessage(message);
+                    break;
+                case Utility.ID_HELLO:
+                    Utility.sendReplyHelloMessage(mActivity.get());
+                    break;
+                case Utility.ID_HELLO_REPLY:
+                    //TODO cancel timeout check once timeout has been implemented
+                    break;
+                default:
+                    Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
+                    break;
+            }
+        }
+    }
 
 
     ServiceConnection mWriteConnection = new ServiceConnection() {
@@ -55,9 +97,8 @@ public class ChatroomActivity extends AppCompatActivity implements ReadServiceHa
             Log.v(TAG, "ReadConnection connected" );
             mReadConnected = true;
             mReadBinder = (BluetoothReadService.ReadBinder) service;
-            mHandler = (ReadServiceHandler) mReadBinder.getHandler();
+            mReadBinder.setHandler(mHandler);
             mReadBinder.startReading();
-            mHandler.setListener(ChatroomActivity.this);
         }
 
         @Override
@@ -92,6 +133,8 @@ public class ChatroomActivity extends AppCompatActivity implements ReadServiceHa
             });
         }
 
+        mHandler = new MyReadHandler(this);
+
         bindService(new Intent(this, BluetoothWriteService.class), mWriteConnection, BIND_AUTO_CREATE);
         bindService(new Intent(this, BluetoothReadService.class), mReadConnection, BIND_AUTO_CREATE);
     }
@@ -111,8 +154,12 @@ public class ChatroomActivity extends AppCompatActivity implements ReadServiceHa
         mWriteBinder = null;
     }
 
-    @Override
-    public void newDisplayText(String message) {
+    /**
+     * Shows a message to the user.
+     *
+     * @param message the message that will be displayed.
+     */
+    public void showMessage(String message) {
         mTextView.append("\n-----THEM\n" + message + "\n-----\n");
     }
 }
