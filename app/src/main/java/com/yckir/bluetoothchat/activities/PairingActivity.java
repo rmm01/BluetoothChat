@@ -61,9 +61,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private RecyclerView mFoundRecyclerView;
     private BluetoothFoundAdapter mFoundAdapter;
 
-    private ClientConnectTask mClientTask = null;
+    private ClientConnectTask mClientTask;
 
-    private BluetoothSocket mSelectedSocket;
     private BluetoothWriteService.WriteBinder mWriteBinder;
     private BluetoothReadService.ReadBinder mReadBinder;
 
@@ -91,6 +90,10 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
 
             switch (message_id){
+                case Utility.ID_CONNECTION_READY:
+                    mActivity.get().mReadBinder.stopReading();
+                    mActivity.get().startActivity(new Intent(mActivity.get(), ChatroomActivity.class));
+                    break;
                 case Utility.ID_HELLO:
                     Utility.sendReplyHelloMessage(mActivity.get());
                     break;
@@ -421,10 +424,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                 return;
             }
 
-            mSelectedSocket = socket;
-            mWriteBinder.addSocket(mSelectedSocket);
-            mReadBinder.addSocket(mSelectedSocket);
-            startActivity(new Intent(PairingActivity.this, ChatroomActivity.class));
+            mWriteBinder.addSocket(socket);
+            mReadBinder.addSocket(socket);
+            mReadBinder.startReading(socket.getRemoteDevice().getAddress());
 
         }else{
             Toast.makeText(PairingActivity.this, "Could not connect to server, try again", Toast.LENGTH_SHORT).show();

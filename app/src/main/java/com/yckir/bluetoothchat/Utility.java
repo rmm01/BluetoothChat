@@ -23,10 +23,24 @@ public class Utility {
     public static final String ID_SEND_DISPLAY_TEXT = "0000";
     public static final String ID_HELLO             = "0001";
     public static final String ID_HELLO_REPLY       = "0002";
+    public static final String ID_CONNECTION_READY  = "0003";
 
     public static UUID getBTChatUUID(){
         byte[] b = "ajsvcrgcdfg".getBytes();
         return UUID.nameUUIDFromBytes(b);
+    }
+
+    /**
+     * send a message that all clients have connection and communication can begin.
+     */
+    public static void sendConnectionReadyMessage(Context context){
+        Log.v(TAG, "sendConnectionReadyMessage");
+        String data = ID_CONNECTION_READY;
+        Intent intent = new Intent(context, BluetoothWriteService.class);
+        intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
+        intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
+
+        context.startService(intent);
     }
 
     /**
@@ -68,6 +82,8 @@ public class Utility {
         Intent intent = new Intent(context, BluetoothWriteService.class);
         intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
         intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
+
+        context.startService(intent);
     }
 
     /**
@@ -84,5 +100,7 @@ public class Utility {
         Intent intent = new Intent(context, BluetoothWriteService.class);
         intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
         intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
+
+        context.startService(intent);
     }
 }
