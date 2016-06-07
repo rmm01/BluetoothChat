@@ -30,19 +30,23 @@ public class ChatroomActivity extends AppCompatActivity {
 
     private TextView mTextView;
     private EditText mEditText;
-    private boolean mWriteConnected;
-    private boolean mReadConnected;
+
     private BluetoothReadService.ReadBinder mReadBinder;
     private BluetoothWriteService.WriteBinder mWriteBinder;
-
     private MyReadHandler mHandler;
+
+    private boolean mWriteConnected;
+    private boolean mReadConnected;
+    private boolean mIsServer;
 
     private static class MyReadHandler extends Handler {
 
         private final WeakReference<ChatroomActivity> mActivity;
+        private final boolean mServer;
 
-        public MyReadHandler(ChatroomActivity activity){
+        public MyReadHandler(ChatroomActivity activity, boolean isServer){
             mActivity = new WeakReference<>(activity);
+            mServer = isServer;
         }
 
         @Override
@@ -51,16 +55,19 @@ public class ChatroomActivity extends AppCompatActivity {
             int size = msg.arg1;
             byte[] byte_message = (byte[]) msg.obj;
 
-            String message = new String(byte_message);
+            String rawMessage = new String(byte_message);
 
-            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
-            message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
+            String message_id = (rawMessage.substring(0, Utility.LENGTH_OF_SEND_ID));
+            String message = rawMessage.substring(Utility.LENGTH_OF_SEND_ID, size);
 
             Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
 
             switch (message_id){
                 case Utility.ID_SEND_DISPLAY_TEXT:
                     mActivity.get().showMessage(message);
+                    if(mServer)
+                        Utility.sendDisplayTextMessage(mActivity.get(), message);
+
                     break;
                 case Utility.ID_HELLO:
                     Utility.sendReplyHelloMessage(mActivity.get());
@@ -82,6 +89,7 @@ public class ChatroomActivity extends AppCompatActivity {
             Log.v(TAG, "WriteConnection connected" );
             mWriteConnected = true;
             mWriteBinder = (BluetoothWriteService.WriteBinder) service;
+            Utility.sendConnectionReadyMessage(ChatroomActivity.this);
         }
 
         @Override
@@ -116,6 +124,8 @@ public class ChatroomActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        mIsServer = getIntent().getBooleanExtra(EXTRA_SERVER, false);
+
         mTextView = (TextView) findViewById(R.id.conversation);
         mEditText = (EditText) findViewById(R.id.send_text);
 
@@ -128,13 +138,13 @@ public class ChatroomActivity extends AppCompatActivity {
                             .setAction("Action", null).show();
                     String text = mEditText.getText().toString();
                     Utility.sendDisplayTextMessage(ChatroomActivity.this, text);
-                    mTextView.append("\n-----YOU\n" + text + "\n-----\n");
-
+                    if(mIsServer)
+                        mTextView.append("\n-----YOU\n" + text + "\n-----\n");
                 }
             });
         }
 
-        mHandler = new MyReadHandler(this);
+        mHandler = new MyReadHandler(this, mIsServer);
 
         bindService(new Intent(this, BluetoothWriteService.class), mWriteConnection, BIND_AUTO_CREATE);
         bindService(new Intent(this, BluetoothReadService.class), mReadConnection, BIND_AUTO_CREATE);
