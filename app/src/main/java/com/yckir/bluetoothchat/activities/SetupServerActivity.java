@@ -367,6 +367,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     public void startServer(View view){
-        startActivity(new Intent(SetupServerActivity.this, ChatroomActivity.class));
+        Intent intent = new Intent(this, ChatroomActivity.class);
+        intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
+        startActivity(intent);
     }
 }

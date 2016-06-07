@@ -25,7 +25,8 @@ import java.lang.ref.WeakReference;
 
 public class ChatroomActivity extends AppCompatActivity {
 
-    private static final String TAG = "ChatroomActivity";
+    public static final String TAG = "ChatroomActivity";
+    public static final String EXTRA_SERVER = "EXTRA_SERVER";
 
     private TextView mTextView;
     private EditText mEditText;
@@ -126,7 +127,7 @@ public class ChatroomActivity extends AppCompatActivity {
                     Snackbar.make(view, "sending message", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                     String text = mEditText.getText().toString();
-                    Utility.sendDisplayText(ChatroomActivity.this, text);
+                    Utility.sendDisplayTextMessage(ChatroomActivity.this, text);
                     mTextView.append("\n-----YOU\n" + text + "\n-----\n");
 
                 }

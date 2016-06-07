@@ -54,7 +54,7 @@ public class Utility {
      * @param context app context
      * @param displayText the text that will be shown to the user.
      */
-    public static void sendDisplayText(Context context, String displayText){
+    public static void sendDisplayTextMessage(Context context, String displayText){
         Log.v(TAG, "startActionWrite");
 
         String data = ID_SEND_DISPLAY_TEXT + displayText;
