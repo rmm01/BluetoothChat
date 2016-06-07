@@ -16,6 +16,9 @@ public class Utility {
     //number of bytes int the message identifier
     public static final int LENGTH_OF_SEND_ID = 4;
 
+    //max number of bluetooth devices that a server can have communicate with
+    public static final int MAX_NUM_BLUETOOTH_DEVICES = 4;
+
     //ids of the types of messages being sent
     public static final String ID_SEND_DISPLAY_TEXT = "0000";
     public static final String ID_HELLO             = "0001";

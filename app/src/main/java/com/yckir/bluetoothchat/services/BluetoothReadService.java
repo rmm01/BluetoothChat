@@ -1,6 +1,7 @@
 package com.yckir.bluetoothchat.services;
 
 import android.app.Service;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Binder;
@@ -10,26 +11,29 @@ import android.os.Message;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.yckir.bluetoothchat.Utility;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Set;
 
 public class BluetoothReadService extends Service {
     private static final String TAG = "ReadService";
 
-    private ArrayList<InputStream> mInputStreams;
-    private ArrayList<BluetoothSocket> mSockets;
-    private ArrayList<Thread> mReadingThreads;
-
+    private HashMap<String, ReadServiceInfo> mClients;
     private ReadBinder mBinder;
 
-    //indicates that the user is currently reading
-    private boolean mReading;
-
     //handler to be able to communicate with the a client on the main thread;
-    Handler mHandler;
+    private Handler mHandler;
 
-
+    /**
+     * gets a new thread that will read from a given inputStream. Sends messages to the handler
+     * when it reads a message.
+     *
+     * @param inputStream input stream that will be reading input.
+     * @return thread that will read input when started
+     */
     private Thread getReadThread(final InputStream inputStream){
         return new Thread(){
             @Override
@@ -37,7 +41,6 @@ public class BluetoothReadService extends Service {
 
                 byte[] buffer = new byte[1024];
                 int numBytes;
-
 
                 while(!isInterrupted()){
 
@@ -51,8 +54,6 @@ public class BluetoothReadService extends Service {
                     }
                 }
                 Log.v(TAG,"finishing thread");
-                mReading = false;
-
             }
         };
     }
@@ -62,17 +63,15 @@ public class BluetoothReadService extends Service {
         super.onCreate();
         Log.v(TAG, "onCreate");
         mBinder = new ReadBinder();
-        mSockets = new ArrayList<>(4);
-        mInputStreams = new ArrayList<>(4);
-        mReadingThreads = new ArrayList<>(4);
+        mClients = new HashMap<>(Utility.MAX_NUM_BLUETOOTH_DEVICES);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         //this method will not be used, the bulk of the service involves the binder object
 
-        if(mSockets.size() == 0) {
-            Log.v(TAG, "onStartCommand not enabled");
+        if(mClients.isEmpty()) {
+            Log.v(TAG, "onStartCommand has no bluetooth clients");
             return START_NOT_STICKY;
         }
 
@@ -104,15 +103,24 @@ public class BluetoothReadService extends Service {
     @Override
     public void onDestroy() {
         Log.v(TAG, "onDestroy");
-        if(mReading){
-            for(int i = 0; i < mReadingThreads.size(); i++){
-                mReadingThreads.get(i).interrupt();
+
+        ReadServiceInfo info;
+        Set<String> keySet = mClients.keySet();
+        for(String key : keySet){
+            info = mClients.get(key);
+            if(info.thread.isAlive()) {
+                Log.v(TAG, "Interrupting thread with key: " + key);
+                info.thread.interrupt();
+            }
+
+            try {
+                info.socket.close();
+            } catch (IOException e) {
+                Log.v(TAG, "could not close socket with key " + key);
+                e.printStackTrace();
             }
         }
 
-        mSockets = null;
-        mInputStreams = null;
-        mReadingThreads = null;
         mHandler = null;
         super.onDestroy();
     }
@@ -122,16 +130,18 @@ public class BluetoothReadService extends Service {
      * <p>
      * 1. Give the service the bluetooth sockets.
      * <p>
-     * 2. Start and stop the socket from reading input,.
+     * 2. Start and stop the socket from reading input.
      * <p>
      * 3. Setting the handler that will be used to notify ui thread of messages.
      */
     public class ReadBinder extends Binder {
+
         /**
-         * sets the socket. This can only be done if the bluetooth socket is not currently reading.
+         * add a bluetooth socket that has been connected with another bluetooth device. Use
+         * socket.getRemoteDevice().getAddress() to get the mac address so that you can start and
+         * stop reading.
          *
-         * @return false if socket was being used to read or input stream could not be retrieved
-         * from the socket, true otherwise
+         * @return false if an input stream could not be retrieved from the socket, true otherwise
          */
         public boolean addSocket(BluetoothSocket socket){
             Log.v(TAG, "adding socket");
@@ -144,51 +154,110 @@ public class BluetoothReadService extends Service {
                 return false;
             }
 
-            mInputStreams.add(tmpIn);
-            mSockets.add(socket);
+            ReadServiceInfo info = new ReadServiceInfo();
+            info.socket = socket;
+            info.device = socket.getRemoteDevice();
+            info.inputStream = tmpIn;
+
             return true;
         }
 
         /**
-         * @return true if the bluetooth socket is currently reading.
+         * Starts reading using an already added bluetooth socket with the given macAddress.
+         * The macAddress can be found using socket.getRemoteDevice().getAddress().
+         *
+         * @param macAddress the mac address of an already added bluetooth socket.
+         * @return false if no handler has been added, or if no socket has the given macAddress,
+         *                  true otherwise.
          */
-        public boolean isReading(){
-            return mReading;
+        public boolean startReading(String macAddress){
+
+            if(mClients.isEmpty() || mHandler == null || !mClients.containsKey(macAddress))
+                return false;
+
+            ReadServiceInfo info = mClients.get(macAddress);
+
+            if(info.thread == null || !info.thread.isAlive()) {
+                Log.v(TAG, "starting thread with mac address: " + macAddress);
+                info.thread = getReadThread(info.inputStream);
+                info.thread.start();
+            }//else it is already reading
+
+            return true;
         }
 
         /**
-         * Have the socket start reading for input if it is not already.
+         * Have all sockets start reading if they are not already.
          *
-         * @return false if already reading or socket is null, true otherwise.
+         * @return false if no bluetooth sockets added or no handler set, true otherwise.
          */
         public boolean startReading(){
-            if(mReading || mSockets.size() == 0 || mHandler == null)
+            if(mClients.isEmpty() || mHandler == null)
                 return false;
-            mReading = true;
 
-            Thread tempThread;
-            for(int i = 0; i < mInputStreams.size(); i++){
-                tempThread = getReadThread( mInputStreams.get(i) );
-                mReadingThreads.add( tempThread );
-                tempThread.start();
+            ReadServiceInfo info;
+            Set<String> keySet = mClients.keySet();
+
+            for(String key : keySet){
+                info = mClients.get(key);
+                if(info.thread == null || !info.thread.isAlive()) {
+                    Log.v(TAG, "starting thread with key: " + key);
+                    info.thread = getReadThread(info.inputStream);
+                    info.thread.start();
+                }//else it is already reading
             }
-
             return true;
         }
 
         /**
-         * Stops the bluetooth form reading. Can be safely called if not reading or not.
+         * Stops reading from an already added bluetooth socket with the given macAddress.
+         * The macAddress can be found using socket.getRemoteDevice().getAddress().
          *
-         * @return false if not reading or socket not set. true if was reading and is stopping.
+         * @param macAddress the mac address of an already added bluetooth socket.
+         * @return false if no handler has been added, or if no socket has the given macAddress,
+         *                  true otherwise.
          */
-        public boolean stopReading(){
-            if(!mReading || mSockets.size() == 0)
+        public boolean stopReading(String macAddress){
+
+            if(mClients.isEmpty() || mHandler == null || !mClients.containsKey(macAddress))
                 return false;
 
-            for(int i = 0; i < mReadingThreads.size(); i++){
-                mReadingThreads.get(i).interrupt();
+            ReadServiceInfo info = mClients.get(macAddress);
+
+            if(info.thread == null)
+                return true;
+
+            if(info.thread.isAlive()) {
+                Log.v(TAG, "stopping thread with key: " + macAddress);
+                info.thread.interrupt();
             }
-            mReading = false;
+
+            info.thread = null;
+            return true;
+        }
+
+        /**
+         * Stops all bluetooth devices from reading.
+         *
+         * @return false if no bluetooth clients or handler set, true otherwise.
+         */
+        public boolean stopReading(){
+            if(mClients.isEmpty() || mHandler == null)
+                return false;
+
+            ReadServiceInfo info;
+            Set<String> keySet = mClients.keySet();
+
+            for(String key : keySet){
+                info = mClients.get(key);
+                if(info.thread == null)
+                    continue;
+                if(info.thread.isAlive()) {
+                    Log.v(TAG, "Interrupting thread with key: " + key);
+                    info.thread.interrupt();
+                }
+                info.thread = null;
+            }
             return true;
         }
 
@@ -208,5 +277,14 @@ public class BluetoothReadService extends Service {
             return mHandler;
         }
 
+    }
+
+    private static class ReadServiceInfo {
+        //should be non null only if it is currently running,
+        //set equal to null once it stops.
+        public Thread thread;
+        public BluetoothSocket socket;
+        public BluetoothDevice device;
+        public InputStream inputStream;
     }
 }
