@@ -51,7 +51,7 @@ public class ServerAcceptTask extends AsyncTask<Void, BluetoothSocket, Void>{
                 Log.v(TAG, "got a client");
                 publishProgress(clientSocket);
             }
-
+            clientSocket = null;
         }
 
         try {

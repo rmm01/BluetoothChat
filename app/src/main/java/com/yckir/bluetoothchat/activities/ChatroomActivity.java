@@ -89,7 +89,8 @@ public class ChatroomActivity extends AppCompatActivity {
             Log.v(TAG, "WriteConnection connected" );
             mWriteConnected = true;
             mWriteBinder = (BluetoothWriteService.WriteBinder) service;
-            Utility.sendConnectionReadyMessage(ChatroomActivity.this);
+            if(mIsServer)
+                Utility.sendConnectionReadyMessage(ChatroomActivity.this);
         }
 
         @Override
@@ -155,9 +156,10 @@ public class ChatroomActivity extends AppCompatActivity {
         super.onDestroy();
         if(mReadConnected)
             unbindService(mReadConnection);
-        if(mWriteConnected)
+        if(mWriteConnected) {
+            mReadBinder.stopReading();
             unbindService(mWriteConnection);
-
+        }
         //on onServiceDisconnected may not be called since we are disconnecting gracefully.
         mReadConnected = false;
         mWriteConnected = false;

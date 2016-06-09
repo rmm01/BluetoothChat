@@ -39,6 +39,7 @@ public class BluetoothReadService extends Service {
             @Override
             public void run() {
 
+                Log.v(TAG, "starting reading thread");
                 byte[] buffer = new byte[1024];
                 int numBytes;
 
@@ -46,6 +47,7 @@ public class BluetoothReadService extends Service {
 
                     try {
                         numBytes = inputStream.read(buffer);
+                        Log.v(TAG, "read something");
                         Message m = mHandler.obtainMessage(0, numBytes, -1, buffer);
                         mHandler.sendMessage(m);
                     } catch (IOException e) {
@@ -159,6 +161,8 @@ public class BluetoothReadService extends Service {
             info.device = socket.getRemoteDevice();
             info.inputStream = tmpIn;
 
+            mClients.put(info.device.getAddress(), info);
+
             return true;
         }
 
@@ -171,6 +175,7 @@ public class BluetoothReadService extends Service {
          *                  true otherwise.
          */
         public boolean startReading(String macAddress){
+            Log.v(TAG, "startReading " + macAddress);
 
             if(mClients.isEmpty() || mHandler == null || !mClients.containsKey(macAddress))
                 return false;
@@ -192,6 +197,8 @@ public class BluetoothReadService extends Service {
          * @return false if no bluetooth sockets added or no handler set, true otherwise.
          */
         public boolean startReading(){
+            Log.v(TAG, "startReading all");
+
             if(mClients.isEmpty() || mHandler == null)
                 return false;
 
