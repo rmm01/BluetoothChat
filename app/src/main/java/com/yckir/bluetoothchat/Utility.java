@@ -20,10 +20,11 @@ public class Utility {
     public static final int MAX_NUM_BLUETOOTH_DEVICES = 4;
 
     //ids of the types of messages being sent
-    public static final String ID_SEND_DISPLAY_TEXT = "0000";
-    public static final String ID_HELLO             = "0001";
-    public static final String ID_HELLO_REPLY       = "0002";
-    public static final String ID_CONNECTION_READY  = "0003";
+    public static final String ID_SEND_DISPLAY_TEXT  = "0000";
+    public static final String ID_HELLO              = "0001";
+    public static final String ID_HELLO_REPLY        = "0002";
+    public static final String ID_CONNECTION_READY   = "0003";
+    public static final String ID_CONNECTION_DECLINE = "0004";
 
     public static UUID getBTChatUUID(){
         byte[] b = "ajsvcrgcdfg".getBytes();

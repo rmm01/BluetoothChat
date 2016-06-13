@@ -63,6 +63,16 @@ public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocket
         notifyDataSetChanged();
     }
 
+    public void removeItem(BluetoothDevice device, BluetoothSocket socket){
+        mDevices.remove(device);
+        mSockets.remove(socket);
+        notifyDataSetChanged();
+    }
+
+    public ArrayList<BluetoothSocket> getSockets(){
+        return mSockets;
+    }
+
     public void updateItems(ArrayList<BluetoothDevice> devices, ArrayList<BluetoothSocket> sockets){
         if(devices == null)
             throw new IllegalArgumentException("parameter is null");

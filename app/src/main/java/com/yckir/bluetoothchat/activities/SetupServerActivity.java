@@ -62,7 +62,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private ServerAcceptTask mServerTask = null;
 
-    private BluetoothSocket mSelectedSocket;
     private BluetoothReadService.ReadBinder mReadBinder;
     private BluetoothWriteService.WriteBinder mWriteBinder;
 
@@ -356,14 +355,19 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             return;
         }
 
-        mSelectedSocket = clientSocket;
-        mWriteBinder.addSocket(mSelectedSocket);
-        mReadBinder.addSocket(mSelectedSocket);
+        mWriteBinder.addSocket(clientSocket);
+        mReadBinder.addSocket(clientSocket);
     }
 
     @Override
     public void BTF_ItemClick(BluetoothDevice device, BluetoothSocket socket) {
-
+        if(mUnconnectedAdapter.contains(device.getAddress()) ) {
+            mConnectedAdapter.addItem(device, socket);
+            mUnconnectedAdapter.removeItem(device,socket);
+        }else{
+            mConnectedAdapter.removeItem(device, socket);
+            mUnconnectedAdapter.addItem(device,socket);
+        }
     }
 
     public void startServer(View view){
