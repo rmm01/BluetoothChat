@@ -96,8 +96,8 @@
             android:layout_below="@id/unconnected_devices_recycler_view"
             android:layout_centerHorizontal="true"
             android:enabled="false"
-            android:onClick="startServer"
-            android:text="Start Server"/>
+            android:onClick="startChatroom"
+            android:text="Start Chatroom"/>
 
     </RelativeLayout>
 

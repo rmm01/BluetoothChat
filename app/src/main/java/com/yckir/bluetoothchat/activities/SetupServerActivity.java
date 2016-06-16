@@ -349,7 +349,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
     }
 
-    public void startServer(View view){
+    public void startChatroom(View view){
 
         if(mConnectedAdapter.getItemCount() == 0)
             Toast.makeText(this, "no accepted clients",Toast.LENGTH_SHORT).show();
