@@ -15,7 +15,7 @@
             android:layout_margin="20dp"
             android:paddingBottom="20dp"
             android:layout_centerHorizontal="true"
-            android:text="@string/status_waiting"/>
+            android:text="@string/status_no_clients"/>
 
         <TextView
             android:id="@+id/bluetooth_name_label"

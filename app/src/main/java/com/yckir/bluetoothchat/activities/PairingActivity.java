@@ -46,6 +46,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private TextView mBlueToothName;
     private TextView mDiscoverable;
     private TextView mFindDevices;
+    private TextView mStatusText;
     private SwitchCompat mBluetoothSwitch;
     private ProgressWheel mDiscoverableWheel;
     private ProgressWheel mFindDevicesWheel;
@@ -183,6 +184,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mBlueToothName = (TextView)findViewById(R.id.bluetooth_name);
         mDiscoverable = (TextView)findViewById(R.id.enable_discovery_label);
         mFindDevices = (TextView)findViewById(R.id.find_devices_prompt);
+        mStatusText = (TextView)findViewById(R.id.status_message);
         mBluetoothSwitch = (SwitchCompat)findViewById(R.id.enable_blue_tooth);
         mDiscoverableWheel = (ProgressWheel)findViewById(R.id.enable_discovery);
         mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
@@ -375,16 +377,24 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void discoveryStarted() {
         mFindDevicesWheel.spin();
+        mStatusText.setText(R.string.status_finding);
     }
 
     @Override
     public void discoveryFinished() {
         mFindDevicesWheel.stopSpinning();
+        if(mPairedAdapter.getItemCount() + mFoundAdapter.getItemCount() > 0)
+            mStatusText.setText(R.string.status_found);
+        else
+            mStatusText.setText(R.string.status_not_found);
     }
 
     @Override
     public void BTF_ItemClick(BluetoothDevice device) {
         Toast.makeText(this, "Attempting to connect with " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
+        if(mBluetoothAdapter.isDiscovering())
+            mBluetoothAdapter.cancelDiscovery();
+        mStatusText.setText(R.string.status_connecting);
         mClientTask = new ClientConnectTask(device, Utility.getBTChatUUID());
         mClientTask.setListener(this);
         mClientTask.execute();
@@ -393,18 +403,17 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void serverSearchFinished(boolean found, BluetoothSocket socket) {
         if(found){
-            Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
-
-            if(!mConnected) {
-                Log.e(TAG, "not connected to read or write service when a server is found");
+            if(mConnected) {
+                Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
+                mStatusText.setText(R.string.status_connected);
+                mBinder.addSocket(socket);
+                mBinder.enableRW(socket.getRemoteDevice().getAddress());
                 return;
             }
-
-            mBinder.addSocket(socket);
-            mBinder.enableRW(socket.getRemoteDevice().getAddress());
-
-        }else{
-            Toast.makeText(PairingActivity.this, "Could not connect to server, try again", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "not connected to read or write service when a server is found");
         }
+        Toast.makeText(PairingActivity.this, "Could not connect to server, try again", Toast.LENGTH_SHORT).show();
+        mStatusText.setText(R.string.status_connect_failed);
+
     }
 }

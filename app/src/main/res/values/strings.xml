@@ -34,8 +34,10 @@
     <string name="status_not_finding">Not currently looking for a Server</string>
     <string name="status_finding">Looking for Server</string>
     <string name="status_found">Select a server to connect to</string>
-    <string name="status_connecting">Attempting to connect to server</string>
-    <string name="status_waiting">Connected, waiting for server to begin</string>
+    <string name="status_not_found">No nearby Bluetooth devices found</string>
+    <string name="status_connecting">Attempting to connect to the server</string>
+    <string name="status_connect_failed">Unable to connect to the server</string>
+    <string name="status_connected">Connected, waiting for server to begin</string>
 
     <!-- ChatroomActivity -->
     <string name="title_activity_chatroom">ChatroomActivity</string>
