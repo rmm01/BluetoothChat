@@ -17,6 +17,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,6 +51,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private BluetoothAdapter mBluetoothAdapter;
 
+    private Button mStartButton;
     private TextView mBlueToothName;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
@@ -64,6 +66,25 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private BluetoothService.BluetoothBinder mBinder;
 
     private MyReadHandler mHandler;
+
+    private boolean mConnected;
+
+    private ServiceConnection mBluetoothConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.v(TAG, "BluetoothConnection connected" );
+            mConnected = true;
+            mBinder = (BluetoothService.BluetoothBinder ) service;
+            mBinder.setHandler(mHandler);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.v(TAG, "BluetoothConnection disconnected" );
+            mConnected = false;
+            mBinder = null;
+        }
+    };
 
     private static class MyReadHandler extends Handler{
 
@@ -100,26 +121,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
     }
 
-    private boolean mConnected;
-
-    private ServiceConnection mBluetoothConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.v(TAG, "BluetoothConnection connected" );
-            mConnected = true;
-            mBinder = (BluetoothService.BluetoothBinder ) service;
-            mBinder.setHandler(mHandler);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.v(TAG, "BluetoothConnection disconnected" );
-            mConnected = false;
-            mBinder = null;
-        }
-    };
-
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -137,6 +138,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         setContentView(R.layout.activity_setup_server);
 
+        mStartButton = (Button)findViewById(R.id.start_button);
         mBlueToothName = (TextView)findViewById(R.id.bluetooth_name);
         mBlueToothName.setText( mBluetoothAdapter.getName() );
 
@@ -339,6 +341,11 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }else{
             mConnectedAdapter.removeItem(device, socket);
             mUnconnectedAdapter.addItem(device,socket);
+        }
+        if(mConnectedAdapter.getItemCount() > 0){
+            mStartButton.setEnabled(true);
+        }else{
+            mStartButton.setEnabled(false);
         }
     }
 
