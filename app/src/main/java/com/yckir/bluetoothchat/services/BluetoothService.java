@@ -94,7 +94,7 @@ public class BluetoothService extends Service {
 
                     Log.v(TAG, "read input for thread with id " + mId);
                     if(mClientHandler == null)
-                        continue;
+                        break;
 
                     Message m = mClientHandler.obtainMessage(0, numBytes, -1, buffer);
                     mClientHandler.sendMessage(m);
@@ -187,7 +187,7 @@ public class BluetoothService extends Service {
      * Sockets can be disabled, re-enabled, and removed. Removed sockets are also closed.
      * Sockets are automatically disabled and closed when the services onDestroy is called.
      */
-    private class BluetoothBinder extends Binder{
+    public class BluetoothBinder extends Binder{
 
         /**
          * Add a bluetooth socket that has been connected with a remote bluetooth device. A socket

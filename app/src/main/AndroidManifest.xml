@@ -35,11 +35,7 @@
             android:theme="@style/AppTheme.NoActionBar">
         </activity>
         <service
-            android:name=".services.BluetoothReadService"
-            android:exported="false">
-        </service>
-        <service
-            android:name=".services.BluetoothWriteService"
+            android:name=".services.BluetoothService"
             android:exported="false">
         </service>
     </application>

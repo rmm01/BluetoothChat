@@ -1,11 +1,5 @@
 package com.yckir.bluetoothchat;
 
-import android.content.Context;
-import android.content.Intent;
-import android.util.Log;
-
-import com.yckir.bluetoothchat.services.BluetoothWriteService;
-
 import java.util.UUID;
 
 public class Utility {
@@ -26,44 +20,45 @@ public class Utility {
     public static final String ID_CONNECTION_READY   = "0003";
     public static final String ID_CONNECTION_DECLINE = "0004";
 
+    /**
+     * @return the UUID for bluetooth communication
+     */
     public static UUID getBTChatUUID(){
         byte[] b = "ajsvcrgcdfg".getBytes();
         return UUID.nameUUIDFromBytes(b);
     }
 
     /**
-     * send a message that all clients have connection and communication can begin.
+     * creates a message that telling client that communication can begin. This is an indicator to
+     * start the activity that allows clients to communicate with each other. Should only be sent by
+     * server.
+     * @return the message to be sent to remote bluetooth device.
      */
-    public static void sendConnectionReadyMessage(Context context){
-        Log.v(TAG, "sendConnectionReadyMessage");
-        String data = ID_CONNECTION_READY;
-        Intent intent = new Intent(context, BluetoothWriteService.class);
-        intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
-        intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
-
-        context.startService(intent);
+    public static String makeConnectionReadyMessage(){
+        return ID_CONNECTION_READY;
     }
 
     /**
-     * Send text that will be displayed as a message on the connected devices.
-     * Sends an intent to the BluetoothWriteService.
-     * <p>
-     * The data is sent using BluetoothWriteService with the action
-     * BluetoothWriteService.ACTION_SEND_MESSAGE and the data is in the extra field
-     * BluetoothWriteService.EXTRA_MESSAGE. The message id is ID_SEND_DISPLAY_TEXT.
+     * Creates a message telling the client that the client has been denied connection with the
+     * server. Should only be sent by server.
      *
-     * @param context app context
+     * @return the message to be sent to remote bluetooth device.
+     */
+    public static String makeConnectionDeclinedMessage(){
+        return ID_CONNECTION_DECLINE;
+    }
+
+    /**
+     * Creates a message that will be visible to all devices. A client can use this message to have
+     * the server broadcast the message to all clients, including itself. A server can use this to have
+     * the message sent to all clients.
+     *
      * @param displayText the text that will be shown to the user.
      */
-    public static void sendDisplayTextMessage(Context context, String displayText){
-        Log.v(TAG, "startActionWrite");
+    public static String makeDisplayTextMessage(String displayText){
+        //TODO split this into two messages, one for server, one for client.
+        return ID_SEND_DISPLAY_TEXT + displayText;
 
-        String data = ID_SEND_DISPLAY_TEXT + displayText;
-        Intent intent = new Intent(context, BluetoothWriteService.class);
-        intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
-        intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
-
-        context.startService(intent);
     }
 
     /**
@@ -72,36 +67,18 @@ public class Utility {
      *
      * <p>
      * If no response is received in 7 seconds, it can be assumed that the connection has been broken.
-     *
-     * <p>
-     * The data is sent using BluetoothWriteService with the action
-     * BluetoothWriteService.ACTION_SEND_MESSAGE and the data is in the extra field
-     * BluetoothWriteService.EXTRA_MESSAGE. The message id is ID_HELLO.
      */
-    public static void sendHelloMessage(Context context){
-        String data = ID_HELLO;
-        Intent intent = new Intent(context, BluetoothWriteService.class);
-        intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
-        intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
+    public static String makeHelloMessage(){
+        return ID_HELLO;
 
-        context.startService(intent);
     }
 
     /**
      * Sends a reply hello message to a bluetooth device. This is used to tell the device that sent
-     * the hello that you are aware of its presence. Should only be used when you get a sendHelloMessage.
-     *
-     * <p>
-     * The data is sent using BluetoothWriteService with the action
-     * BluetoothWriteService.ACTION_SEND_MESSAGE and the data is in the extra field
-     * BluetoothWriteService.EXTRA_MESSAGE. The message id is ID_HELLO.
+     * the hello that you are aware of its presence. Should only be used when you get a
+     * sendHelloMessage.
      */
-    public static void sendReplyHelloMessage(Context context){
-        String data = ID_HELLO_REPLY;
-        Intent intent = new Intent(context, BluetoothWriteService.class);
-        intent.setAction(BluetoothWriteService.ACTION_SEND_MESSAGE);
-        intent.putExtra(BluetoothWriteService.EXTRA_MESSAGE, data);
-
-        context.startService(intent);
+    public static String makeReplyHelloMessage(){
+        return ID_HELLO_REPLY;
     }
 }

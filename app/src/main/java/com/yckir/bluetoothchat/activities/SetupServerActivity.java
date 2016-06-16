@@ -27,8 +27,7 @@ import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
 import com.yckir.bluetoothchat.recyle_adapters.BluetoothSocketAdapter;
-import com.yckir.bluetoothchat.services.BluetoothReadService;
-import com.yckir.bluetoothchat.services.BluetoothWriteService;
+import com.yckir.bluetoothchat.services.BluetoothService;
 
 
 import java.lang.ref.WeakReference;
@@ -62,8 +61,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private ServerAcceptTask mServerTask = null;
 
-    private BluetoothReadService.ReadBinder mReadBinder;
-    private BluetoothWriteService.WriteBinder mWriteBinder;
+    private BluetoothService.BluetoothBinder mBinder;
 
     private MyReadHandler mHandler;
 
@@ -90,7 +88,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
             switch (message_id){
                 case Utility.ID_HELLO:
-                    Utility.sendReplyHelloMessage(mActivity.get());
+                    mActivity.get().mBinder.writeMessage(Utility.makeReplyHelloMessage());
                     break;
                 case Utility.ID_HELLO_REPLY:
                     //TODO cancel timeout check once timeout has been implemented
@@ -102,41 +100,22 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
     }
 
-    private boolean mWriteConnected;
-    private boolean mReadConnected;
+    private boolean mConnected;
 
-    private ServiceConnection mWriteConnection = new ServiceConnection() {
+    private ServiceConnection mBluetoothConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.v(TAG, "WriteConnection connected" );
-            mWriteConnected = true;
-            mWriteBinder = (BluetoothWriteService.WriteBinder ) service;
+            Log.v(TAG, "BluetoothConnection connected" );
+            mConnected = true;
+            mBinder = (BluetoothService.BluetoothBinder ) service;
+            mBinder.setHandler(mHandler);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.v(TAG, "WriteConnection disconnected" );
-            mWriteConnected = false;
-            mWriteBinder = null;
-        }
-    };
-
-    private ServiceConnection mReadConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.v(TAG, "ReadConnection connected" );
-            mReadConnected = true;
-            mReadBinder = (BluetoothReadService.ReadBinder ) service;
-            //we are not using the handler in this activity, this will
-            //be used later
-            mReadBinder.setHandler(mHandler);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.v(TAG, "ReadConnection disconnected" );
-            mReadConnected = false;
-            mReadBinder = null;
+            Log.v(TAG, "BluetoothConnection disconnected" );
+            mConnected = false;
+            mBinder = null;
         }
     };
 
@@ -179,10 +158,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         mHandler = new MyReadHandler(this);
 
-        Intent write = new Intent(this, BluetoothWriteService.class);
-        Intent read = new Intent(this, BluetoothReadService.class);
-        bindService(write,mWriteConnection ,BIND_AUTO_CREATE);
-        bindService(read,mReadConnection , BIND_AUTO_CREATE);
+        bindService(new Intent(this, BluetoothService.class), mBluetoothConnection,BIND_AUTO_CREATE);
     }
 
     @Override
@@ -240,16 +216,12 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mReadConnected)
-            unbindService(mReadConnection);
-        if(mWriteConnected)
-            unbindService(mWriteConnection);
+        if(mConnected)
+            unbindService(mBluetoothConnection);
 
         //on onServiceDisconnected may not be called since we are disconnecting gracefully.
-        mReadConnected = false;
-        mWriteConnected = false;
-        mReadBinder = null;
-        mWriteBinder = null;
+        mConnected = false;
+        mBinder = null;
     }
 
     @Override
@@ -350,13 +322,13 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     public void foundClient(BluetoothSocket clientSocket) {
         mUnconnectedAdapter.addItem(clientSocket.getRemoteDevice(), clientSocket);
-        if(!mReadConnected || !mWriteConnected) {
-            Log.e(TAG, "not connected to read or write service when a server is found");
+        if(!mConnected) {
+            Log.e(TAG, "not connected to BluetoothService when a server is found");
             return;
         }
 
-        mWriteBinder.addSocket(clientSocket);
-        mReadBinder.addSocket(clientSocket);
+        mBinder.addSocket(clientSocket);
+        mBinder.enableRW();
     }
 
     @Override
@@ -371,6 +343,20 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     public void startServer(View view){
+
+        if(mConnectedAdapter.getItemCount() == 0)
+            Toast.makeText(this, "no accepted clients",Toast.LENGTH_SHORT).show();
+
+        String address;
+        for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
+            address = socket.getRemoteDevice().getAddress();
+            mBinder.writeMessage(Utility.makeConnectionDeclinedMessage(), address);
+
+            mBinder.disableRW(address);
+            mBinder.removeSocket(address);
+
+        }
+
         Intent intent = new Intent(this, ChatroomActivity.class);
         intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
         startActivity(intent);

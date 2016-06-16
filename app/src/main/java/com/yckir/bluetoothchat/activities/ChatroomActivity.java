@@ -18,8 +18,7 @@ import android.widget.TextView;
 
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.Utility;
-import com.yckir.bluetoothchat.services.BluetoothReadService;
-import com.yckir.bluetoothchat.services.BluetoothWriteService;
+import com.yckir.bluetoothchat.services.BluetoothService;
 
 import java.lang.ref.WeakReference;
 
@@ -31,12 +30,10 @@ public class ChatroomActivity extends AppCompatActivity {
     private TextView mTextView;
     private EditText mEditText;
 
-    private BluetoothReadService.ReadBinder mReadBinder;
-    private BluetoothWriteService.WriteBinder mWriteBinder;
+    private BluetoothService.BluetoothBinder mBinder;
     private MyReadHandler mHandler;
 
-    private boolean mWriteConnected;
-    private boolean mReadConnected;
+    private boolean mConnected;
     private boolean mIsServer;
 
     private static class MyReadHandler extends Handler {
@@ -66,11 +63,10 @@ public class ChatroomActivity extends AppCompatActivity {
                 case Utility.ID_SEND_DISPLAY_TEXT:
                     mActivity.get().showMessage(message);
                     if(mServer)
-                        Utility.sendDisplayTextMessage(mActivity.get(), message);
-
+                        mActivity.get().mBinder.writeMessage(Utility.makeDisplayTextMessage(message));
                     break;
                 case Utility.ID_HELLO:
-                    Utility.sendReplyHelloMessage(mActivity.get());
+                    mActivity.get().mBinder.writeMessage(Utility.makeReplyHelloMessage());
                     break;
                 case Utility.ID_HELLO_REPLY:
                     //TODO cancel timeout check once timeout has been implemented
@@ -82,39 +78,25 @@ public class ChatroomActivity extends AppCompatActivity {
         }
     }
 
-
-    ServiceConnection mWriteConnection = new ServiceConnection() {
+    ServiceConnection mBluetoothConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.v(TAG, "WriteConnection connected" );
-            mWriteConnected = true;
-            mWriteBinder = (BluetoothWriteService.WriteBinder) service;
+            Log.v(TAG, "BluetoothConnection connected" );
+            mConnected = true;
+            mBinder = (BluetoothService.BluetoothBinder) service;
+
+            mBinder.setHandler(mHandler);
+            mBinder.enableRW();
+
             if(mIsServer)
-                Utility.sendConnectionReadyMessage(ChatroomActivity.this);
+                mBinder.writeMessage(Utility.makeConnectionReadyMessage());
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.v(TAG, "WriteConnection disconnected" );
-            mWriteConnected = false;
-            mWriteBinder = null;
-        }
-    };
-
-    ServiceConnection mReadConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.v(TAG, "ReadConnection connected" );
-            mReadConnected = true;
-            mReadBinder = (BluetoothReadService.ReadBinder) service;
-            mReadBinder.setHandler(mHandler);
-            mReadBinder.startReading();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mReadConnected = false;
-            mReadBinder = null;
+            Log.v(TAG, "BluetoothConnection disconnected" );
+            mConnected = false;
+            mBinder = null;
         }
     };
 
@@ -138,7 +120,8 @@ public class ChatroomActivity extends AppCompatActivity {
                     Snackbar.make(view, "sending message", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                     String text = mEditText.getText().toString();
-                    Utility.sendDisplayTextMessage(ChatroomActivity.this, text);
+                    if(mConnected)
+                        mBinder.writeMessage(Utility.makeDisplayTextMessage(text));
                     if(mIsServer)
                         mTextView.append("\n-----YOU\n" + text + "\n-----\n");
                 }
@@ -146,25 +129,20 @@ public class ChatroomActivity extends AppCompatActivity {
         }
 
         mHandler = new MyReadHandler(this, mIsServer);
-
-        bindService(new Intent(this, BluetoothWriteService.class), mWriteConnection, BIND_AUTO_CREATE);
-        bindService(new Intent(this, BluetoothReadService.class), mReadConnection, BIND_AUTO_CREATE);
+        bindService(new Intent(this, BluetoothService.class), mBluetoothConnection, BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mReadConnected)
-            unbindService(mReadConnection);
-        if(mWriteConnected) {
-            mReadBinder.stopReading();
-            unbindService(mWriteConnection);
+        if(mConnected) {
+            mBinder.disableRW();
+            unbindService(mBluetoothConnection);
         }
+
         //on onServiceDisconnected may not be called since we are disconnecting gracefully.
-        mReadConnected = false;
-        mWriteConnected = false;
-        mReadBinder = null;
-        mWriteBinder = null;
+        mConnected = false;
+        mBinder = null;
     }
 
     /**
