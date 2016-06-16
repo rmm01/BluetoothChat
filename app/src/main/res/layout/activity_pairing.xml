@@ -10,12 +10,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <TextView
-            android:id="@+id/paring_message"
+            android:id="@+id/status_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="20dp"
+            android:paddingBottom="20dp"
             android:layout_centerHorizontal="true"
-            android:text="@string/pairing_message"/>
+            android:text="@string/status_not_finding"/>
 
         <TextView
             android:id="@+id/bluetooth_name_label"
@@ -23,7 +24,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="20dp"
             android:layout_marginStart="20dp"
-            android:layout_below="@id/paring_message"
+            android:layout_below="@id/status_message"
             android:text="@string/bluetooth_name_label"/>
 
         <TextView

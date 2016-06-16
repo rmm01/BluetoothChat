@@ -53,6 +53,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private Button mStartButton;
     private TextView mBlueToothName;
+    private TextView mStatusText;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
     private BluetoothSocketAdapter mConnectedAdapter;
@@ -139,6 +140,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         setContentView(R.layout.activity_setup_server);
 
         mStartButton = (Button)findViewById(R.id.start_button);
+        mStatusText = (TextView)findViewById(R.id.status_message);
         mBlueToothName = (TextView)findViewById(R.id.bluetooth_name);
         mBlueToothName.setText( mBluetoothAdapter.getName() );
 
@@ -329,6 +331,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             return;
         }
 
+        mStatusText.setText(R.string.status_no_accepted_clients);
+
         mBinder.addSocket(clientSocket);
         mBinder.enableRW();
     }
@@ -344,8 +348,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
         if(mConnectedAdapter.getItemCount() > 0){
             mStartButton.setEnabled(true);
+            mStatusText.setText(R.string.status_accepted_clients);
         }else{
             mStartButton.setEnabled(false);
+            mStatusText.setText(R.string.status_no_accepted_clients);
         }
     }
 
