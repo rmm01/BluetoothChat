@@ -58,6 +58,58 @@ public class BluetoothService extends Service {
     }
 
     /**
+     * Enable reading and writing if it hasn't already for the bluetooth device with the
+     * specified info.
+     *
+     * @param info info and data about the bluetooth connection
+
+     */
+    private void enableRW(@NonNull BluetoothConnectionInfo info){
+        Log.v(TAG, "startReading for " + info.device.getAddress());
+
+        if(info.readThread == null || !info.readThread.isAlive()){
+            info.readThread = new ReadThread(info.device.getAddress(), 1024, info.inputStream);
+            info.readThread.start();
+        }else{
+            Log.v(TAG, "already reading");
+        }
+
+        if(info.writeThread == null || !info.writeThread.isAlive()){
+            info.writeThread = new WriteThread(info.device.getAddress(), info.outputStream, info.blockingQueue);
+            info.writeThread.start();
+        }else{
+            Log.v(TAG, "already writing");
+        }
+    }
+
+    /**
+     * Disable reading and writing if it hasn't already for the bluetooth device with the
+     * specified info.
+     *
+     * @param info info and data about the bluetooth connection
+     */
+    private void disableRW(BluetoothConnectionInfo info){
+        Log.v(TAG, "stopReading for " + info.device.getAddress());
+
+        if(info.readThread == null || !info.readThread.isAlive()){
+            Log.v(TAG,"not currently reading");
+        }else{
+            Log.v(TAG,"stopping reading");
+            info.readThread.interrupt();
+        }
+        info.readThread = null;
+
+        if(info.writeThread == null || !info.writeThread.isAlive()){
+            Log.v(TAG,"not currently writing");
+        }else{
+            Log.v(TAG,"stopping reading");
+            info.writeThread.interrupt();
+        }
+        info.writeThread = null;
+    }
+
+
+    /**
      * Thread that reads input from an inputStream. The data that is read will be sent to attached
      * handler. In the Message, the number of bytes will be sent as arg1 and the bytes will be sent
      * in obj parameter.
@@ -93,14 +145,17 @@ public class BluetoothService extends Service {
                     numBytes = mInputStream.read(buffer);
 
                     Log.v(TAG, "read input for thread with id " + mId);
-                    if(mClientHandler == null)
-                        break;
+                    if(mClientHandler == null) {
+                        Log.e(TAG, "no handler, loosing message: " + new String(buffer));
+                        continue;
+                    }
 
                     Message m = mClientHandler.obtainMessage(0, numBytes, -1, buffer);
                     mClientHandler.sendMessage(m);
                 } catch (IOException e) {
                     Log.v(TAG, "read exception for thread with id " + mId);
                     e.printStackTrace();
+                    break;
                 }
             }
             Log.v(TAG,"finishing thread with id " + mId);
@@ -241,7 +296,7 @@ public class BluetoothService extends Service {
             info.blockingQueue = new ArrayBlockingQueue<>(10, true);
 
             mClients.put(info.device.getAddress(), info);
-
+            enableRW(info);
             return true;
         }
 
@@ -274,7 +329,7 @@ public class BluetoothService extends Service {
             if(tmpInfo == null || tmpInfo.socket == null)
                 return;
 
-            disableRW(macAddress);
+            disableRW(tmpInfo);
 
             try {
                 tmpInfo.inputStream.close();
@@ -304,101 +359,6 @@ public class BluetoothService extends Service {
 
 
         /**
-         * Enable reading and writing if it isn't already for all sockets that have been added.
-         */
-        public void enableRW(){
-            for(BluetoothConnectionInfo tmpInfo: mClients.values()){
-                enableRW(tmpInfo.device.getAddress());
-            }
-        }
-
-
-        /**
-         * Enable reading and writing if it hasn't already for the bluetooth device with the
-         * specified mac address. The mac address ia available using
-         * BluetoothSocket.getRemoteDevice().getAddress().
-         *
-         * @param macAddress mac address of the bluetooth device
-         * @return false if no handler set or if mac address doesn't exist for an added socket.
-         */
-        public boolean enableRW(String macAddress){
-            Log.v(TAG, "startReading for " + macAddress);
-
-            if( !mClients.containsKey(macAddress) )
-                return false;
-
-            BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
-
-            if(tmpInfo == null || tmpInfo.socket == null || mClientHandler == null)
-                return false;
-
-            if(tmpInfo.readThread == null || !tmpInfo.readThread.isAlive()){
-                tmpInfo.readThread = new ReadThread(tmpInfo.device.getAddress(), 1024, tmpInfo.inputStream);
-                tmpInfo.readThread.start();
-            }else{
-                Log.v(TAG, "already reading");
-            }
-
-            if(tmpInfo.writeThread == null || !tmpInfo.writeThread.isAlive()){
-                tmpInfo.writeThread = new WriteThread(tmpInfo.device.getAddress(), tmpInfo.outputStream, tmpInfo.blockingQueue);
-                tmpInfo.writeThread.start();
-            }else{
-                Log.v(TAG, "already writing");
-            }
-            return true;
-        }
-
-
-        /**
-         * Disable reading and writing if it isn't already for all sockets that have been added.
-         */
-        public void disableRW(){
-            for(BluetoothConnectionInfo tmpInfo: mClients.values()){
-                disableRW(tmpInfo.device.getAddress());
-            }
-        }
-
-
-        /**
-         * Disable reading and writing if it hasn't already for the bluetooth device with the
-         * specified mac address. The mac address ia available using
-         * BluetoothSocket.getRemoteDevice().getAddress().
-         *
-         * @param macAddress mac address of the bluetooth device that will have the message sent to
-         * @return false if no handler set or if mac address doesn't exist for an added socket.
-         */
-        public boolean disableRW(String macAddress){
-            Log.v(TAG, "stopReading for " + macAddress);
-
-            if( !mClients.containsKey(macAddress) )
-                return false;
-
-            BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
-
-            if(tmpInfo == null || tmpInfo.socket == null || mClientHandler == null)
-                return false;
-
-            if(tmpInfo.readThread == null || !tmpInfo.readThread.isAlive()){
-                Log.v(TAG,"not currently reading");
-            }else{
-                Log.v(TAG,"stopping reading");
-                tmpInfo.readThread.interrupt();
-            }
-            tmpInfo.readThread = null;
-
-            if(tmpInfo.writeThread == null || !tmpInfo.writeThread.isAlive()){
-                Log.v(TAG,"not currently writing");
-            }else{
-                Log.v(TAG,"stopping reading");
-                tmpInfo.writeThread.interrupt();
-            }
-            tmpInfo.writeThread = null;
-
-            return true;
-        }
-
-
-        /**
          * Write a message to all bluetooth sockets that are enabled. The mac address ia available
          * using BluetoothSocket.getRemoteDevice().getAddress().
          *
@@ -417,7 +377,7 @@ public class BluetoothService extends Service {
          *
          * @param message message to be sent
          * @param macAddress mac address of the bluetooth device that will have the message sent to
-         * @return false if no handler set or if mac address doesn't exist for an added socket.
+         * @return false if mac address doesn't exist for an added socket.
          */
         public boolean writeMessage(String message, String macAddress){
             Log.v(TAG, "writeMessage to " + macAddress);
@@ -427,7 +387,7 @@ public class BluetoothService extends Service {
 
             BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
 
-            if(tmpInfo == null || tmpInfo.socket == null || mClientHandler == null)
+            if(tmpInfo == null || tmpInfo.socket == null)
                 return false;
 
             if(!tmpInfo.blockingQueue.offer(message))
@@ -455,7 +415,7 @@ public class BluetoothService extends Service {
          *
          * @param handler handler to receive messages.
          */
-        public void setHandler(@NonNull Handler handler){
+        public void setHandler(Handler handler){
             mClientHandler = handler;
         }
 

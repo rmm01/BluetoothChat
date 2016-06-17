@@ -92,7 +92,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
             switch (message_id){
                 case Utility.ID_CONNECTION_READY:
-                    mActivity.get().mBinder.disableRW();
+                    mActivity.get().mBinder.setHandler(null);
                     mActivity.get().startActivity(new Intent(mActivity.get(), ChatroomActivity.class));
                     break;
                 case Utility.ID_HELLO:
@@ -407,7 +407,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
                 mStatusText.setText(R.string.status_connected);
                 mBinder.addSocket(socket);
-                mBinder.enableRW(socket.getRemoteDevice().getAddress());
                 return;
             }
             Log.e(TAG, "not connected to read or write service when a server is found");

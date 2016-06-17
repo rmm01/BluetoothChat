@@ -125,6 +125,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.v(TAG, "onCreate");
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
@@ -168,6 +169,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     protected void onStart() {
         super.onStart();
+        Log.v(TAG, "onStart");
 
         if(mBTStatusReceiver == null) {
             mBTStatusReceiver = new BluetoothStatusReceiver();
@@ -183,6 +185,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     protected void onResume() {
         super.onResume();
+        Log.v(TAG, "onResume");
 
         //since receivers are unregistered when activity goes into background, need to ensure that
         //the device is in the proper state
@@ -202,9 +205,15 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        Log.v(TAG, "onPause");
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
-
+        Log.v(TAG, "onStop");
         //stop server if going into background
         stopServer();
 
@@ -220,6 +229,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        Log.v(TAG, "onDestroy");
         if(mConnected)
             unbindService(mBluetoothConnection);
 
@@ -334,7 +344,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mStatusText.setText(R.string.status_no_accepted_clients);
 
         mBinder.addSocket(clientSocket);
-        mBinder.enableRW();
     }
 
     @Override
@@ -365,11 +374,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             address = socket.getRemoteDevice().getAddress();
             mBinder.writeMessage(Utility.makeConnectionDeclinedMessage(), address);
 
-            mBinder.disableRW(address);
             mBinder.removeSocket(address);
 
         }
-
+        mBinder.setHandler(null);
         Intent intent = new Intent(this, ChatroomActivity.class);
         intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
         startActivity(intent);

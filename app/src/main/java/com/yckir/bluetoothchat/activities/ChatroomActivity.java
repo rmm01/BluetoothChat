@@ -86,7 +86,6 @@ public class ChatroomActivity extends AppCompatActivity {
             mBinder = (BluetoothService.BluetoothBinder) service;
 
             mBinder.setHandler(mHandler);
-            mBinder.enableRW();
 
             if(mIsServer)
                 mBinder.writeMessage(Utility.makeConnectionReadyMessage());
@@ -136,7 +135,6 @@ public class ChatroomActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if(mConnected) {
-            mBinder.disableRW();
             unbindService(mBluetoothConnection);
         }
 
