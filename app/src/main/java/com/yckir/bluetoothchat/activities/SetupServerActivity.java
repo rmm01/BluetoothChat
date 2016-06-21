@@ -103,6 +103,17 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
             String message = new String(byte_message);
 
+            if(msg.what == 1){
+                mActivity.get().mUnconnectedAdapter.removeItem(message);
+                mActivity.get().mConnectedAdapter.removeItem(message);
+                if(mActivity.get().mConnectedAdapter.getItemCount() < 1) {
+                    mActivity.get().mStartButton.setEnabled(false);
+                    mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
+                }
+                Toast.makeText(mActivity.get(), "disconnected from " + message, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
             message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
 

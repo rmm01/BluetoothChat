@@ -19,6 +19,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -47,6 +48,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private TextView mDiscoverable;
     private TextView mFindDevices;
     private TextView mStatusText;
+    private Button mCancelConnectionButton;
     private SwitchCompat mBluetoothSwitch;
     private ProgressWheel mDiscoverableWheel;
     private ProgressWheel mFindDevicesWheel;
@@ -85,6 +87,12 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
             String message = new String(byte_message);
 
+            //you are disconnecting
+            if(msg.what == 1){
+                Toast.makeText(mActivity.get(), "disconnected from " + message, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
             message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
 
@@ -103,6 +111,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                     break;
                 case Utility.ID_CONNECTION_DECLINE:
                     Toast.makeText(mActivity.get(), "The Server has declined the connection", Toast.LENGTH_LONG).show();
+                    mActivity.get().mStatusText.setText(R.string.status_connect_declined);
+                    mActivity.get().enableBluetoothFields(true);
+                    mActivity.get().mBinder.removeSockets();
                     break;
                 default:
                     Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
@@ -185,6 +196,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mDiscoverable = (TextView)findViewById(R.id.enable_discovery_label);
         mFindDevices = (TextView)findViewById(R.id.find_devices_prompt);
         mStatusText = (TextView)findViewById(R.id.status_message);
+        mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
         mBluetoothSwitch = (SwitchCompat)findViewById(R.id.enable_blue_tooth);
         mDiscoverableWheel = (ProgressWheel)findViewById(R.id.enable_discovery);
         mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
@@ -302,6 +314,13 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mBluetoothAdapter.startDiscovery();
     }
 
+    public void cancelConnection(View v){
+        mStatusText.setText(R.string.status_connect_canceled);
+        mCancelConnectionButton.setVisibility(View.INVISIBLE);
+        enableBluetoothFields(true);
+        mBinder.removeSockets();
+    }
+
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         Log.v("PAIR_ACTIVITY", "bluetoothSwitch");
@@ -407,6 +426,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
                 mStatusText.setText(R.string.status_connected);
                 mBinder.addSocket(socket);
+                mCancelConnectionButton.setVisibility(View.VISIBLE);
+                enableBluetoothFields(false);
                 return;
             }
             Log.e(TAG, "not connected to read or write service when a server is found");

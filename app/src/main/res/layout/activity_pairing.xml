@@ -156,5 +156,16 @@
             android:layout_marginStart="20dp"
             android:layout_marginTop="20dp"
             android:layout_below="@id/found_devices_label"/>
+
+        <Button
+            android:id="@+id/cancel_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_below="@id/found_devices_recycler_view"
+            android:layout_centerHorizontal="true"
+            android:visibility="invisible"
+            android:onClick="cancelConnection"
+            android:text="@string/cancel_connection"/>
     </RelativeLayout>
 </ScrollView>

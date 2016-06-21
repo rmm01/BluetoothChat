@@ -63,9 +63,22 @@ public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocket
         notifyDataSetChanged();
     }
 
-    public void removeItem(BluetoothDevice device, BluetoothSocket socket){
+    public void removeItem(BluetoothDevice device, BluetoothSocket socket) {
         mDevices.remove(device);
         mSockets.remove(socket);
+        notifyDataSetChanged();
+    }
+
+    public void removeItem(String address){
+        int i = 0;
+        for(BluetoothDevice device: mDevices){
+            if(device.getAddress().equals(address)) {
+                mDevices.remove(i);
+                mSockets.remove(i);
+                return;
+            }
+            i++;
+        }
         notifyDataSetChanged();
     }
 

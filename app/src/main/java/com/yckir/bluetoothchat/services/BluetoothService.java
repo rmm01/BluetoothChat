@@ -27,6 +27,57 @@ public class BluetoothService extends Service {
     private BluetoothBinder mBinder;
     private Handler mClientHandler;
 
+    /**
+     * Enable reading and writing if it hasn't already for the bluetooth device with the
+     * specified info.
+     *
+     * @param info info and data about the bluetooth connection
+
+     */
+    private void enableRW(@NonNull BluetoothConnectionInfo info){
+        Log.v(TAG, "enableRW for " + info.device.getAddress());
+
+        if(info.readThread == null || !info.readThread.isAlive()){
+            info.readThread = new ReadThread(info.device.getAddress(), 1024, info.inputStream);
+            info.readThread.start();
+        }else{
+            Log.v(TAG, "already reading");
+        }
+
+        if(info.writeThread == null || !info.writeThread.isAlive()){
+            info.writeThread = new WriteThread(info.device.getAddress(), info.outputStream, info.blockingQueue);
+            info.writeThread.start();
+        }else{
+            Log.v(TAG, "already writing");
+        }
+    }
+
+    /**
+     * Disable reading and writing if it hasn't already for the bluetooth device with the
+     * specified info.
+     *
+     * @param info info and data about the bluetooth connection
+     */
+    private void disableRW(BluetoothConnectionInfo info){
+        Log.v(TAG, "disableRW for " + info.device.getAddress());
+
+        if(info.writeThread == null || !info.writeThread.isAlive()){
+            Log.v(TAG,"not currently writing");
+        }else{
+            Log.v(TAG,"disable writing");
+            info.blockingQueue.offer(WriteThread.SHUTDOWN_KEY);
+        }
+
+        if(info.readThread == null || !info.readThread.isAlive()){
+            Log.v(TAG,"not currently reading");
+        }else{
+            Log.v(TAG,"disable reading");
+            info.readThread.interrupt();
+        }
+        info.readThread = null;
+        info.writeThread = null;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -58,58 +109,6 @@ public class BluetoothService extends Service {
     }
 
     /**
-     * Enable reading and writing if it hasn't already for the bluetooth device with the
-     * specified info.
-     *
-     * @param info info and data about the bluetooth connection
-
-     */
-    private void enableRW(@NonNull BluetoothConnectionInfo info){
-        Log.v(TAG, "startReading for " + info.device.getAddress());
-
-        if(info.readThread == null || !info.readThread.isAlive()){
-            info.readThread = new ReadThread(info.device.getAddress(), 1024, info.inputStream);
-            info.readThread.start();
-        }else{
-            Log.v(TAG, "already reading");
-        }
-
-        if(info.writeThread == null || !info.writeThread.isAlive()){
-            info.writeThread = new WriteThread(info.device.getAddress(), info.outputStream, info.blockingQueue);
-            info.writeThread.start();
-        }else{
-            Log.v(TAG, "already writing");
-        }
-    }
-
-    /**
-     * Disable reading and writing if it hasn't already for the bluetooth device with the
-     * specified info.
-     *
-     * @param info info and data about the bluetooth connection
-     */
-    private void disableRW(BluetoothConnectionInfo info){
-        Log.v(TAG, "stopReading for " + info.device.getAddress());
-
-        if(info.readThread == null || !info.readThread.isAlive()){
-            Log.v(TAG,"not currently reading");
-        }else{
-            Log.v(TAG,"stopping reading");
-            info.readThread.interrupt();
-        }
-        info.readThread = null;
-
-        if(info.writeThread == null || !info.writeThread.isAlive()){
-            Log.v(TAG,"not currently writing");
-        }else{
-            Log.v(TAG,"stopping reading");
-            info.writeThread.interrupt();
-        }
-        info.writeThread = null;
-    }
-
-
-    /**
      * Thread that reads input from an inputStream. The data that is read will be sent to attached
      * handler. In the Message, the number of bytes will be sent as arg1 and the bytes will be sent
      * in obj parameter.
@@ -118,24 +117,24 @@ public class BluetoothService extends Service {
 
         private InputStream mInputStream;
         private final int mBufferSize;
-        private final String mId;
+        private final String mAddress;
 
         /**
          * Creates a new thread that will read input from a stream.
          *
-         * @param id id used for debug logging
-         * @param bufferSize size of input buffer
-         * @param inputStream input stream of a bluetooth socket
+         * @param address mac address for the remote bluetooth device
+         * @param bufferSize max size of input buffer
+         * @param inputStream input stream of the bluetooth connection
          */
-        public ReadThread(String id, int bufferSize, InputStream inputStream){
+        public ReadThread(String address, int bufferSize, InputStream inputStream){
             mInputStream = inputStream;
             mBufferSize = bufferSize;
-            mId = id;
+            mAddress = address;
         }
 
         @Override
         public void run() {
-            Log.v(TAG, "starting reading thread with id " + mId);
+            Log.v(TAG, "START READING: " + mAddress);
 
             byte[] buffer = new byte[mBufferSize];
             int numBytes;
@@ -144,21 +143,22 @@ public class BluetoothService extends Service {
                 try {
                     numBytes = mInputStream.read(buffer);
 
-                    Log.v(TAG, "read input for thread with id " + mId);
+                    Log.v(TAG, "READ INPUT: " + mAddress);
                     if(mClientHandler == null) {
-                        Log.e(TAG, "no handler, loosing message: " + new String(buffer));
+                        Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + new String(buffer));
                         continue;
                     }
 
                     Message m = mClientHandler.obtainMessage(0, numBytes, -1, buffer);
                     mClientHandler.sendMessage(m);
                 } catch (IOException e) {
-                    Log.v(TAG, "read exception for thread with id " + mId);
+                    Log.v(TAG, "READ EXCEPTION: " + mAddress);
                     e.printStackTrace();
                     break;
                 }
             }
-            Log.v(TAG,"finishing thread with id " + mId);
+            Log.v(TAG,"CLOSING READING: " + mAddress);
+            mBinder.removeSocket(mAddress);
         }
     }
 
@@ -166,20 +166,21 @@ public class BluetoothService extends Service {
      * Thread that writes to other bluetooth devices.
      */
     private class WriteThread extends Thread{
-        private final String mId;
+        private final String mAddress;
         private OutputStream mOutputStream;
         private ArrayBlockingQueue<String> mQueue;
+        private static final String SHUTDOWN_KEY = "poliknbybdkfnammchyjmdnyukkdujmnyiyrtffsedrae";
 
         /**
          * Creates a thread that writes input using a stream. Communicate to this thread by giving it
          * messages to send using the blocking queue that is given as  a parameter.
          *
-         * @param id id of the thread used for debugging
+         * @param address mac address of the thread used for debugging
          * @param outputStream output stream of a bluetooth socket
          * @param queue a queue that will be given messages to be sent using output stream..
          */
-        public WriteThread(String id, OutputStream outputStream, ArrayBlockingQueue<String> queue){
-            mId = id;
+        public WriteThread(String address, OutputStream outputStream, ArrayBlockingQueue<String> queue){
+            mAddress = address;
             mOutputStream = outputStream;
             mQueue = queue;
         }
@@ -195,24 +196,31 @@ public class BluetoothService extends Service {
             try {
                 mOutputStream.write(bytes);
             } catch (IOException e) {
-                Log.v(TAG, "Could not write message : " + message + ", to thread with id " + mId);
+                Log.v(TAG, "WRITE EXCEPTION, MESSAGE : " + message + ", ADDRESS " + mAddress);
                 e.printStackTrace();
             }
         }
 
         @Override
         public void run() {
-            Log.v(TAG, "writing thread has started for id " + mId);
+            Log.v(TAG, "START WRITING: " + mAddress);
             while ( !isInterrupted() ){
                 try{
                     String data = mQueue.take();
+                    if(data.equals( SHUTDOWN_KEY )) {
+                        Log.v(TAG, "SHUTDOWN KEY RECEIVED: " + mAddress);
+                        break;
+                    }
                     sendMessage(data);
                 }catch (InterruptedException e){
-                    Log.v(TAG, "interrupted queue.take() for " + mId);
+                    Log.v(TAG, "WRITE QUEUE EXCEPTION  " + mAddress);
                     e.printStackTrace();
+                    break;
                 }
             }
-            Log.v(TAG, mId + " writing thread has been interrupted and is stopping");
+
+            Log.v(TAG,"CLOSING WRITING: " + mAddress);
+            mBinder.removeSocket(mAddress);
         }
     }
 
@@ -220,6 +228,7 @@ public class BluetoothService extends Service {
      * Stores data associated with a bluetooth connection
      */
     private class BluetoothConnectionInfo {
+        volatile boolean deleting;
         OutputStream outputStream;
         InputStream inputStream;
         //threads will be null until they need to run
@@ -287,7 +296,7 @@ public class BluetoothService extends Service {
                 }
                 return false;
             }
-
+            info.deleting = false;
             info.inputStream = tmpIn;
             info.outputStream = tmpOut;
             info.socket = socket;
@@ -319,42 +328,47 @@ public class BluetoothService extends Service {
          * @param macAddress mac address of the bluetooth device that will have the message sent to
          */
         public void removeSocket(String macAddress){
-            Log.v(TAG, "removeSocket for " + macAddress);
-
-            if(!mClients.containsKey(macAddress))
-                return;
-
             BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
 
-            if(tmpInfo == null || tmpInfo.socket == null)
+            //if cant find connection or already deleting, return
+            if(tmpInfo == null || tmpInfo.deleting)
                 return;
+            tmpInfo.deleting = true;
+
+            Log.v(TAG, "removeSocket for " + macAddress);
 
             disableRW(tmpInfo);
 
             try {
+                Log.v(TAG, "closing the input stream: " + macAddress);
                 tmpInfo.inputStream.close();
             } catch (IOException e) {
-                Log.w(TAG, "could not close the input stream");
+                Log.w(TAG, "could not close the input stream: " + macAddress);
             }
 
-
             try {
+                Log.v(TAG, "closing the output stream: " + macAddress);
                 tmpInfo.outputStream.close();
             } catch (IOException e) {
-                Log.w(TAG, "could not close the output stream");
+                Log.w(TAG, "could not close the output stream: " + macAddress);
             }
-
 
             try {
+                Log.v(TAG, "closing the input socket: " + macAddress);
                 tmpInfo.socket.close();
             } catch (IOException e) {
-                Log.w(TAG, "could not close socket ");
+                Log.w(TAG, "could not close socket: " + macAddress);
             }
 
-            tmpInfo.blockingQueue.clear();
-
             mClients.remove(tmpInfo.device.getAddress());
-            Log.v(TAG, "removed socket with address " + tmpInfo.device.getAddress());
+            Log.v(TAG, "removed from clients: " + tmpInfo.device.getAddress());
+
+            //Send message to handler
+            if(mClientHandler != null){
+                Message m = mClientHandler.obtainMessage(1, macAddress.length(), -1, macAddress.getBytes());
+                mClientHandler.sendMessage(m);
+            }
+
         }
 
 

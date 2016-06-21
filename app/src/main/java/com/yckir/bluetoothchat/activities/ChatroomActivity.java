@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.Utility;
@@ -53,6 +54,11 @@ public class ChatroomActivity extends AppCompatActivity {
             byte[] byte_message = (byte[]) msg.obj;
 
             String rawMessage = new String(byte_message);
+
+            if(msg.what == 1){
+                Toast.makeText(mActivity.get(), "disconnected from " + rawMessage, Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             String message_id = (rawMessage.substring(0, Utility.LENGTH_OF_SEND_ID));
             String message = rawMessage.substring(Utility.LENGTH_OF_SEND_ID, size);
