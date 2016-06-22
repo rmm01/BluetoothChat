@@ -17,15 +17,56 @@ import com.yckir.bluetoothchat.Utility;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
 
 public class BluetoothService extends Service {
+    //check connections every increment of this many milliseconds
+    public static final int TIMEOUT_DURATION = 6000;
+    //after TIMEOUT_LENGTH * MAX_CONNECTION_ATTEMPTS milliseconds without reply, close the connection
+    public static final int MAX_CONNECTION_ATTEMPTS = 3;
+
     private static final String TAG = "BluetoothService";
     private HashMap<String, BluetoothConnectionInfo> mClients;
     private BluetoothBinder mBinder;
     private Handler mClientHandler;
+    private TimeoutHandler mTimeoutHandler;
+
+    /**
+     * Handler used to check every TIMEOUT_DURATION for a connection timeout. Sends a hello message
+     * and increments connectionAttempts for each BluetoothConnectionInfo. If connectionAttempts is
+     * greater greater than or equal to MAX_CONNECTION_ATTEMPTS, then the connection is closed. When
+     * a Hello reply message is received, its connectionAttempts field is set to zero.
+     */
+    private static class TimeoutHandler extends Handler{
+        public int mTimeoutWhat = 1993;
+        WeakReference<BluetoothService> mService;
+
+        public TimeoutHandler(BluetoothService service){
+            mService = new WeakReference<>(service);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            if(msg.what != mTimeoutWhat)
+                return;
+            for(BluetoothConnectionInfo info : mService.get().mClients.values()){
+                if(info.connectionAttempts >= MAX_CONNECTION_ATTEMPTS){
+                    Log.v(TAG, "timeout has occurred: " + info.device.getAddress());
+                    mService.get().mBinder.removeSocket(info.device.getAddress());
+                }else{
+                    info.connectionAttempts++;
+                    if(info.connectionAttempts >1)
+                        Log.v(TAG, "connection attempt " + info.connectionAttempts + ": " + info.device.getAddress());
+                    mService.get().mBinder.writeMessage(Utility.makeHelloMessage(), info.device.getAddress());
+                }
+            }
+            Message m = obtainMessage(mTimeoutWhat);
+            sendMessageDelayed(m,TIMEOUT_DURATION);
+        }
+    }
 
     /**
      * Enable reading and writing if it hasn't already for the bluetooth device with the
@@ -84,6 +125,8 @@ public class BluetoothService extends Service {
         Log.v(TAG, "onCreate");
         mClients = new HashMap<>(Utility.MAX_NUM_BLUETOOTH_DEVICES);
         mBinder = new BluetoothBinder();
+        mTimeoutHandler = new TimeoutHandler(this);
+        mTimeoutHandler.sendMessageDelayed(mTimeoutHandler.obtainMessage(mTimeoutHandler.mTimeoutWhat),TIMEOUT_DURATION);
     }
 
     @Override
@@ -132,6 +175,38 @@ public class BluetoothService extends Service {
             mAddress = address;
         }
 
+        /**
+         * Takes action on a message that was read based on the id.
+         * Default will send the message to client handler. Hello messages are handled here.
+         *
+         * @param numBytes size of message
+         * @param buffer the message that was read
+         */
+        private void parseMessage(int numBytes, byte[] buffer){
+            String message = new String(buffer);
+            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
+
+            switch (message_id){
+
+                //service messages
+                case Utility.ID_HELLO:
+                    mBinder.writeMessage(Utility.makeReplyHelloMessage());
+                    break;
+
+                case Utility.ID_HELLO_REPLY:
+                    BluetoothConnectionInfo info = mClients.get(mAddress);
+                    if(info != null)
+                        info.connectionAttempts = 0;
+                    break;
+
+                //app messages
+                default:
+                    Message m = mClientHandler.obtainMessage(0, numBytes, -1, buffer);
+                    mClientHandler.sendMessage(m);
+                    break;
+            }
+        }
+
         @Override
         public void run() {
             Log.v(TAG, "START READING: " + mAddress);
@@ -148,9 +223,7 @@ public class BluetoothService extends Service {
                         Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + new String(buffer));
                         continue;
                     }
-
-                    Message m = mClientHandler.obtainMessage(0, numBytes, -1, buffer);
-                    mClientHandler.sendMessage(m);
+                    parseMessage(numBytes,buffer);
                 } catch (IOException e) {
                     Log.v(TAG, "READ EXCEPTION: " + mAddress);
                     e.printStackTrace();
@@ -229,6 +302,7 @@ public class BluetoothService extends Service {
      */
     private class BluetoothConnectionInfo {
         volatile boolean deleting;
+        int connectionAttempts;
         OutputStream outputStream;
         InputStream inputStream;
         //threads will be null until they need to run
@@ -296,6 +370,7 @@ public class BluetoothService extends Service {
                 }
                 return false;
             }
+            info.connectionAttempts = 0;
             info.deleting = false;
             info.inputStream = tmpIn;
             info.outputStream = tmpOut;

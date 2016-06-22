@@ -120,12 +120,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
 
             switch (message_id){
-                case Utility.ID_HELLO:
-                    mActivity.get().mBinder.writeMessage(Utility.makeReplyHelloMessage());
-                    break;
-                case Utility.ID_HELLO_REPLY:
-                    //TODO cancel timeout check once timeout has been implemented
-                    break;
                 default:
                     Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
                     break;

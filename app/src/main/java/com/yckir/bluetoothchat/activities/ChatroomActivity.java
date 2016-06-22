@@ -71,12 +71,6 @@ public class ChatroomActivity extends AppCompatActivity {
                     if(mServer)
                         mActivity.get().mBinder.writeMessage(Utility.makeDisplayTextMessage(message));
                     break;
-                case Utility.ID_HELLO:
-                    mActivity.get().mBinder.writeMessage(Utility.makeReplyHelloMessage());
-                    break;
-                case Utility.ID_HELLO_REPLY:
-                    //TODO cancel timeout check once timeout has been implemented
-                    break;
                 default:
                     Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
                     break;

@@ -103,12 +103,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                     mActivity.get().mBinder.setHandler(null);
                     mActivity.get().startActivity(new Intent(mActivity.get(), ChatroomActivity.class));
                     break;
-                case Utility.ID_HELLO:
-                    mActivity.get().mBinder.writeMessage( Utility.makeReplyHelloMessage());
-                    break;
-                case Utility.ID_HELLO_REPLY:
-                    //TODO cancel timeout check once timeout has been implemented
-                    break;
                 case Utility.ID_CONNECTION_DECLINE:
                     Toast.makeText(mActivity.get(), "The Server has declined the connection", Toast.LENGTH_LONG).show();
                     mActivity.get().mStatusText.setText(R.string.status_connect_declined);
