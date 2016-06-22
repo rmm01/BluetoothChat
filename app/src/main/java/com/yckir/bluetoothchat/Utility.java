@@ -13,12 +13,24 @@ public class Utility {
     //max number of bluetooth devices that a server can have communicate with
     public static final int MAX_NUM_BLUETOOTH_DEVICES = 4;
 
-    //ids of the types of messages being sent
-    public static final String ID_SEND_DISPLAY_TEXT  = "0000";
-    public static final String ID_HELLO              = "0001";
-    public static final String ID_HELLO_REPLY        = "0002";
-    public static final String ID_CONNECTION_READY   = "0003";
-    public static final String ID_CONNECTION_DECLINE = "0004";
+    //ids between 1000 and 1099 are reserved for service connection, handled in service
+    public static final String ID_HELLO              = "1000";
+    public static final String ID_HELLO_REPLY        = "1001";
+
+    //ids between 1100 and 1199 are reserved for the pairing and server setup activities
+    public static final String ID_CONNECTION_READY   = "1100";
+    public static final String ID_CONNECTION_DECLINE = "1101";
+    public static final String ID_CLIENT_INFO        = "1102";
+
+    //ids between 1200 and 1299 are used for messages from service to application and vice versa
+    //used mainly to tell user of important events such as client leaving
+    public static final String ID_CONNECTION_CLOSED        = "1200";
+    public static final String ID_SERVER_NOT_RESPONDING    = "1201";
+    public static final String ID_IO_EXCEPTION             = "1202";
+    public static final String ID_APP_MESSAGE              = "1202";
+
+    //ids over 300 are for the application to remote application messages
+    public static final String ID_SEND_DISPLAY_TEXT  = "1300";
 
     /**
      * @return the UUID for bluetooth communication
