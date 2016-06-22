@@ -27,7 +27,7 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.ClientConnectTask;
 import com.yckir.bluetoothchat.R;
-import com.yckir.bluetoothchat.Utility;
+import com.yckir.bluetoothchat.services.Utility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;

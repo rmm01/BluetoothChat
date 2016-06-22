@@ -1,4 +1,4 @@
-package com.yckir.bluetoothchat;
+package com.yckir.bluetoothchat.services;
 
 import java.util.UUID;
 

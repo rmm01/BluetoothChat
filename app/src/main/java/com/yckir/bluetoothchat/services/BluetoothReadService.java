@@ -11,8 +11,6 @@ import android.os.Message;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.yckir.bluetoothchat.Utility;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
