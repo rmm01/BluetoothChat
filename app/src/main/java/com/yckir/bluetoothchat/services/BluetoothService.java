@@ -153,8 +153,8 @@ public class BluetoothService extends Service {
 
     /**
      * Thread that reads input from an inputStream. The data that is read will be sent to attached
-     * handler. In the Message, the number of bytes will be sent as arg1 and the bytes will be sent
-     * in obj parameter.
+     * handler. In the Message, the number of bytes will be sent as arg1 and the string message
+     * will be sent in obj parameter.
      */
     private class ReadThread extends Thread {
 
@@ -183,12 +183,12 @@ public class BluetoothService extends Service {
          * @param buffer the message that was read
          */
         private void parseMessage(int numBytes, byte[] buffer){
-            String message = new String(buffer);
+            String message = new String(buffer, 0, numBytes);
             String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
 
-            switch (message_id){
+            Log.v(TAG, "READ INPUT -" + message +"- "+ mAddress);
 
-                //service messages
+            switch (message_id){
                 case Utility.ID_HELLO:
                     mBinder.writeMessage(Utility.makeReplyHelloMessage());
                     break;
@@ -199,9 +199,12 @@ public class BluetoothService extends Service {
                         info.connectionAttempts = 0;
                     break;
 
-                //app messages
                 default:
-                    Message m = mClientHandler.obtainMessage(0, numBytes, -1, buffer);
+                    if(mClientHandler == null) {
+                        Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + message);
+                        break;
+                    }
+                    Message m = mClientHandler.obtainMessage(0, numBytes, -1, message);
                     mClientHandler.sendMessage(m);
                     break;
             }
@@ -217,12 +220,6 @@ public class BluetoothService extends Service {
             while( !isInterrupted() ){
                 try {
                     numBytes = mInputStream.read(buffer);
-
-                    Log.v(TAG, "READ INPUT: " + mAddress);
-                    if(mClientHandler == null) {
-                        Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + new String(buffer));
-                        continue;
-                    }
                     parseMessage(numBytes,buffer);
                 } catch (IOException e) {
                     Log.v(TAG, "READ EXCEPTION: " + mAddress);
@@ -440,7 +437,7 @@ public class BluetoothService extends Service {
 
             //Send message to handler
             if(mClientHandler != null){
-                Message m = mClientHandler.obtainMessage(1, macAddress.length(), -1, macAddress.getBytes());
+                Message m = mClientHandler.obtainMessage(1, macAddress.length(), -1, macAddress);
                 mClientHandler.sendMessage(m);
             }
 
@@ -499,7 +496,7 @@ public class BluetoothService extends Service {
 
 
         /**
-         * Handler that will receive messages when something is read. Byte message will be in obj
+         * Handler that will receive messages when something is read. String message will be in obj
          * parameter and arg1 will contain size of message.
          *
          * @param handler handler to receive messages.

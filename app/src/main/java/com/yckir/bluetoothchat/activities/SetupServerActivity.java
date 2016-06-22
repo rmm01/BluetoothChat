@@ -99,9 +99,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         public void handleMessage(Message msg) {
 
             int size = msg.arg1;
-            byte[] byte_message = (byte[]) msg.obj;
-
-            String message = new String(byte_message);
+            String message = (String)msg.obj;
 
             if(msg.what == 1){
                 mActivity.get().mUnconnectedAdapter.removeItem(message);

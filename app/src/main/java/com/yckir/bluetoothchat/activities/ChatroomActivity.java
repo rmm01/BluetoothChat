@@ -51,28 +51,26 @@ public class ChatroomActivity extends AppCompatActivity {
         public void handleMessage(Message msg) {
 
             int size = msg.arg1;
-            byte[] byte_message = (byte[]) msg.obj;
-
-            String rawMessage = new String(byte_message);
+            String message = (String)msg.obj;
 
             if(msg.what == 1){
-                Toast.makeText(mActivity.get(), "disconnected from " + rawMessage, Toast.LENGTH_SHORT).show();
+                Toast.makeText(mActivity.get(), "disconnected from " + message, Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            String message_id = (rawMessage.substring(0, Utility.LENGTH_OF_SEND_ID));
-            String message = rawMessage.substring(Utility.LENGTH_OF_SEND_ID, size);
+            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
+            String messageData = message.substring(Utility.LENGTH_OF_SEND_ID, size);
 
-            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
+            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + messageData);
 
             switch (message_id){
                 case Utility.ID_SEND_DISPLAY_TEXT:
-                    mActivity.get().showMessage(message);
+                    mActivity.get().showMessage(messageData);
                     if(mServer)
-                        mActivity.get().mBinder.writeMessage(Utility.makeDisplayTextMessage(message));
+                        mActivity.get().mBinder.writeMessage(Utility.makeDisplayTextMessage(messageData));
                     break;
                 default:
-                    Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
+                    Log.v(TAG, " unknown message id " + message_id + ", with message " + messageData);
                     break;
             }
         }

@@ -68,7 +68,6 @@ public class Utility {
      * @param displayText the text that will be shown to the user.
      */
     public static String makeDisplayTextMessage(String displayText){
-        //TODO split this into two messages, one for server, one for client.
         return ID_SEND_DISPLAY_TEXT + displayText;
 
     }

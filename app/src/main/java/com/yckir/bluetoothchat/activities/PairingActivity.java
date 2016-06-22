@@ -83,9 +83,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         public void handleMessage(Message msg) {
 
             int size = msg.arg1;
-            byte[] byte_message = (byte[]) msg.obj;
-
-            String message = new String(byte_message);
+            String message = (String) msg.obj;
 
             //you are disconnecting
             if(msg.what == 1){
@@ -94,9 +92,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             }
 
             String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
-            message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
+            String messageData = message.substring(Utility.LENGTH_OF_SEND_ID, size);
 
-            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
+            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + messageData);
 
             switch (message_id){
                 case Utility.ID_CONNECTION_READY:
@@ -110,7 +108,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                     mActivity.get().mBinder.removeSockets();
                     break;
                 default:
-                    Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
+                    Log.v(TAG, " unknown message id " + message_id + ", with message " + messageData);
                     break;
             }
         }
