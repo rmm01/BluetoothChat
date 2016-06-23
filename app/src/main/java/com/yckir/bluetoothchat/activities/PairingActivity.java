@@ -25,9 +25,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pnikosis.materialishprogress.ProgressWheel;
+import com.yckir.bluetoothchat.ChatroomUtility;
 import com.yckir.bluetoothchat.ClientConnectTask;
+import com.yckir.bluetoothchat.PairingSetupUtility;
 import com.yckir.bluetoothchat.R;
-import com.yckir.bluetoothchat.services.Utility;
+import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
+import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
@@ -69,39 +72,35 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
     private boolean mConnected;
 
-    private MyReadHandler mHandler;
+    private MyBluetoothHandler mHandler;
 
-    private static class MyReadHandler extends Handler{
+    private static class MyBluetoothHandler extends BluetoothServiceHandler{
 
         private final WeakReference<PairingActivity> mActivity;
 
-        public MyReadHandler(PairingActivity activity){
+        public MyBluetoothHandler(PairingActivity activity){
             mActivity = new WeakReference<>(activity);
         }
 
         @Override
-        public void handleMessage(Message msg) {
+        public void connectionClosed(String macAddress) {
+            Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+        }
 
-            int size = msg.arg1;
-            String message = (String) msg.obj;
+        @Override
+        public void appMessage(String message) {
+            String message_id = (message.substring(0, ServiceUtility.ID_LENGTH));
 
-            //you are disconnecting
-            if(msg.what == 1){
-                Toast.makeText(mActivity.get(), "disconnected from " + message, Toast.LENGTH_SHORT).show();
-                return;
-            }
+            String messageData = null;
+            if(message.length() > ChatroomUtility.ID_LENGTH)
+                messageData = message.substring(ServiceUtility.ID_LENGTH, message.length());
 
-            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
-            String messageData = message.substring(Utility.LENGTH_OF_SEND_ID, size);
-
-            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + messageData);
-
-            switch (message_id){
-                case Utility.ID_CONNECTION_READY:
+            switch (message_id) {
+                case PairingSetupUtility.ID_CONNECTION_READY:
                     mActivity.get().mBinder.setHandler(null);
                     mActivity.get().startActivity(new Intent(mActivity.get(), ChatroomActivity.class));
                     break;
-                case Utility.ID_CONNECTION_DECLINE:
+                case PairingSetupUtility.ID_CONNECTION_DECLINE:
                     Toast.makeText(mActivity.get(), "The Server has declined the connection", Toast.LENGTH_LONG).show();
                     mActivity.get().mStatusText.setText(R.string.status_connect_declined);
                     mActivity.get().enableBluetoothFields(true);
@@ -220,7 +219,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         mBluetoothSwitch.setOnCheckedChangeListener(this);
 
-        mHandler = new MyReadHandler(this);
+        mHandler = new MyBluetoothHandler(this);
 
         Intent intent = new Intent(this, BluetoothService.class);
         bindService(intent ,mBluetoothConnection ,BIND_AUTO_CREATE);
@@ -406,7 +405,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         if(mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
         mStatusText.setText(R.string.status_connecting);
-        mClientTask = new ClientConnectTask(device, Utility.getBTChatUUID());
+        mClientTask = new ClientConnectTask(device, ServiceUtility.getBTChatUUID());
         mClientTask.setListener(this);
         mClientTask.execute();
     }

@@ -4,9 +4,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -17,8 +15,11 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.yckir.bluetoothchat.ChatroomUtility;
+import com.yckir.bluetoothchat.PairingSetupUtility;
 import com.yckir.bluetoothchat.R;
-import com.yckir.bluetoothchat.services.Utility;
+import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
+import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
 import java.lang.ref.WeakReference;
@@ -32,45 +33,42 @@ public class ChatroomActivity extends AppCompatActivity {
     private EditText mEditText;
 
     private BluetoothService.BluetoothBinder mBinder;
-    private MyReadHandler mHandler;
+    private MyBluetoothHandler mBT_Handler;
 
     private boolean mConnected;
     private boolean mIsServer;
 
-    private static class MyReadHandler extends Handler {
+    private static class MyBluetoothHandler extends BluetoothServiceHandler {
 
         private final WeakReference<ChatroomActivity> mActivity;
-        private final boolean mServer;
 
-        public MyReadHandler(ChatroomActivity activity, boolean isServer){
+        public MyBluetoothHandler(ChatroomActivity activity){
             mActivity = new WeakReference<>(activity);
-            mServer = isServer;
         }
 
         @Override
-        public void handleMessage(Message msg) {
+        public void connectionClosed(String macAddress) {
+            Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+            //TODO if server, tell all clients that somebody disconnected.
+        }
 
-            int size = msg.arg1;
-            String message = (String)msg.obj;
+        @Override
+        public void appMessage(String message) {
+            String messageId = (message.substring(0, ChatroomUtility.ID_LENGTH));
+            String messageData = "";
+            if( message.length() > ChatroomUtility.ID_LENGTH )
+                messageData = message.substring(ChatroomUtility.ID_LENGTH, message.length());
 
-            if(msg.what == 1){
-                Toast.makeText(mActivity.get(), "disconnected from " + message, Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
-            String messageData = message.substring(Utility.LENGTH_OF_SEND_ID, size);
-
-            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + messageData);
-
-            switch (message_id){
-                case Utility.ID_SEND_DISPLAY_TEXT:
+            switch (messageId){
+                case ChatroomUtility.ID_SEND_DISPLAY_TEXT:
                     mActivity.get().showMessage(messageData);
-                    if(mServer)
-                        mActivity.get().mBinder.writeMessage(Utility.makeDisplayTextMessage(messageData));
+                    if(mActivity.get().mIsServer) {
+                        String appMessage = ChatroomUtility.makeDisplayTextMessage(messageData);
+                        mActivity.get().mBinder.writeMessage(ServiceUtility.makeAppMessage(appMessage));
+                    }
                     break;
                 default:
-                    Log.v(TAG, " unknown message id " + message_id + ", with message " + messageData);
+                    Log.v(TAG, " unknown chatroom message id " + messageId + ", with message " + messageData);
                     break;
             }
         }
@@ -82,11 +80,12 @@ public class ChatroomActivity extends AppCompatActivity {
             Log.v(TAG, "BluetoothConnection connected" );
             mConnected = true;
             mBinder = (BluetoothService.BluetoothBinder) service;
+            mBinder.setHandler(mBT_Handler);
 
-            mBinder.setHandler(mHandler);
-
-            if(mIsServer)
-                mBinder.writeMessage(Utility.makeConnectionReadyMessage());
+            if(mIsServer) {
+                String appMessage = PairingSetupUtility.makeConnectionReadyMessage();
+                mBinder.writeMessage(ServiceUtility.makeAppMessage(appMessage));
+            }
         }
 
         @Override
@@ -117,15 +116,17 @@ public class ChatroomActivity extends AppCompatActivity {
                     Snackbar.make(view, "sending message", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                     String text = mEditText.getText().toString();
-                    if(mConnected)
-                        mBinder.writeMessage(Utility.makeDisplayTextMessage(text));
+                    if(mConnected) {
+                        String chatMessage = ChatroomUtility.makeDisplayTextMessage(text);
+                        mBinder.writeMessage(ServiceUtility.makeAppMessage( chatMessage ));
+                    }
                     if(mIsServer)
                         mTextView.append("\n-----YOU\n" + text + "\n-----\n");
                 }
             });
         }
 
-        mHandler = new MyReadHandler(this, mIsServer);
+        mBT_Handler = new MyBluetoothHandler(this);
         bindService(new Intent(this, BluetoothService.class), mBluetoothConnection, BIND_AUTO_CREATE);
     }
 

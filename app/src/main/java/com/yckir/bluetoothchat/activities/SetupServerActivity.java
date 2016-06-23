@@ -21,9 +21,11 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.yckir.bluetoothchat.PairingSetupUtility;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.ServerAcceptTask;
-import com.yckir.bluetoothchat.services.Utility;
+import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
+import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
@@ -66,7 +68,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private BluetoothService.BluetoothBinder mBinder;
 
-    private MyReadHandler mHandler;
+    private MyBluetoothHandler mHandler;
 
     private boolean mConnected;
 
@@ -87,41 +89,28 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
     };
 
-    private static class MyReadHandler extends Handler{
+    private static class MyBluetoothHandler extends BluetoothServiceHandler{
 
         private final WeakReference<SetupServerActivity> mActivity;
 
-        public MyReadHandler(SetupServerActivity activity){
+        public MyBluetoothHandler(SetupServerActivity activity){
             mActivity = new WeakReference<>(activity);
         }
 
         @Override
-        public void handleMessage(Message msg) {
-
-            int size = msg.arg1;
-            String message = (String)msg.obj;
-
-            if(msg.what == 1){
-                mActivity.get().mUnconnectedAdapter.removeItem(message);
-                mActivity.get().mConnectedAdapter.removeItem(message);
-                if(mActivity.get().mConnectedAdapter.getItemCount() < 1) {
-                    mActivity.get().mStartButton.setEnabled(false);
-                    mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
-                }
-                Toast.makeText(mActivity.get(), "disconnected from " + message, Toast.LENGTH_SHORT).show();
-                return;
+        public void connectionClosed(String macAddress) {
+            mActivity.get().mUnconnectedAdapter.removeItem(macAddress);
+            mActivity.get().mConnectedAdapter.removeItem(macAddress);
+            if(mActivity.get().mConnectedAdapter.getItemCount() < 1) {
+                mActivity.get().mStartButton.setEnabled(false);
+                mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
             }
+            Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+        }
 
-            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
-            message = message.substring(Utility.LENGTH_OF_SEND_ID, size);
+        @Override
+        public void appMessage(String message) {
 
-            Log.v(TAG, "size = " + size + ", messageId = " + message_id +", message = " + message);
-
-            switch (message_id){
-                default:
-                    Log.v(TAG, " unknown message id " + message_id + ", with message " + message);
-                    break;
-            }
         }
     }
 
@@ -164,7 +153,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mUnconnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mUnconnectedRecyclerView.setAdapter(mUnconnectedAdapter);
 
-        mHandler = new MyReadHandler(this);
+        mHandler = new MyBluetoothHandler(this);
 
         bindService(new Intent(this, BluetoothService.class), mBluetoothConnection,BIND_AUTO_CREATE);
     }
@@ -289,7 +278,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     public void startServer() {
         if(mServerTask == null) {
             Log.v(TAG, "startServer");
-            mServerTask = new ServerAcceptTask(mBluetoothAdapter, Utility.getBTChatUUID(), Utility.SDP_NAME);
+            mServerTask = new ServerAcceptTask(mBluetoothAdapter, ServiceUtility.getBTChatUUID(), ServiceUtility.SDP_NAME);
             mServerTask.setListener(this);
             mServerTask.execute();
         }
@@ -375,7 +364,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         String address;
         for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
             address = socket.getRemoteDevice().getAddress();
-            mBinder.writeMessage(Utility.makeConnectionDeclinedMessage(), address);
+            String appMessage = PairingSetupUtility.makeConnectionDeclinedMessage();
+            mBinder.writeMessage(ServiceUtility.makeAppMessage(appMessage), address);
 
             mBinder.removeSocket(address);
 

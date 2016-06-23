@@ -21,6 +21,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 
 public class BluetoothService extends Service {
+    //TODO: enforce read and write buffer sizes
     //check connections every increment of this many milliseconds
     public static final int TIMEOUT_DURATION = 6000;
     //after TIMEOUT_LENGTH * MAX_CONNECTION_ATTEMPTS milliseconds without reply, close the connection
@@ -29,14 +30,14 @@ public class BluetoothService extends Service {
     private static final String TAG = "BluetoothService";
     private HashMap<String, BluetoothConnectionInfo> mClients;
     private BluetoothBinder mBinder;
-    private Handler mClientHandler;
+    private BluetoothServiceHandler mClientHandler;
     private TimeoutHandler mTimeoutHandler;
 
     /**
-     * Handler used to check every TIMEOUT_DURATION for a connection timeout. Sends a hello message
-     * and increments connectionAttempts for each BluetoothConnectionInfo. If connectionAttempts is
-     * greater greater than or equal to MAX_CONNECTION_ATTEMPTS, then the connection is closed. When
-     * a Hello reply message is received, its connectionAttempts field is set to zero.
+     * Handler used to determine if the connected clients are responding to our messages.
+     * Sends a hello message to each connected client. The remote client should then respond with
+     * a hello reply message. If MAX_CONNECTION_ATTEMPTS consecutive hello messages are unanswered,
+     * then the connection is closed.
      */
     private static class TimeoutHandler extends Handler{
         public int mTimeoutWhat = 1993;
@@ -48,8 +49,11 @@ public class BluetoothService extends Service {
 
         @Override
         public void handleMessage(Message msg) {
-            if(msg.what != mTimeoutWhat)
+            if(msg.what != mTimeoutWhat) {
+                Log.d(TAG, "unknown what " + msg.what + ", received for TimeoutHandler");
                 return;
+            }
+
             for(BluetoothConnectionInfo info : mService.get().mClients.values()){
                 if(info.connectionAttempts >= MAX_CONNECTION_ATTEMPTS){
                     Log.v(TAG, "timeout has occurred: " + info.device.getAddress());
@@ -58,7 +62,7 @@ public class BluetoothService extends Service {
                     info.connectionAttempts++;
                     if(info.connectionAttempts >1)
                         Log.v(TAG, "connection attempt " + info.connectionAttempts + ": " + info.device.getAddress());
-                    mService.get().mBinder.writeMessage(Utility.makeHelloMessage(), info.device.getAddress());
+                    mService.get().mBinder.writeMessage(ServiceUtility.makeHelloMessage(), info.device.getAddress());
                 }
             }
             Message m = obtainMessage(mTimeoutWhat);
@@ -121,7 +125,7 @@ public class BluetoothService extends Service {
     public void onCreate() {
         super.onCreate();
         Log.v(TAG, "onCreate");
-        mClients = new HashMap<>(Utility.MAX_NUM_BLUETOOTH_DEVICES);
+        mClients = new HashMap<>(ServiceUtility.MAX_NUM_BLUETOOTH_DEVICES);
         mBinder = new BluetoothBinder();
         mTimeoutHandler = new TimeoutHandler(this);
         mTimeoutHandler.sendMessageDelayed(mTimeoutHandler.obtainMessage(mTimeoutHandler.mTimeoutWhat),TIMEOUT_DURATION);
@@ -150,9 +154,10 @@ public class BluetoothService extends Service {
     }
 
     /**
-     * Thread that reads input from an inputStream. The data that is read will be sent to attached
-     * handler. In the Message, the number of bytes will be sent as arg1 and the string message
-     * will be sent in obj parameter.
+     * Thread that reads data from a remote bluetooth device using an inputStream retrieved from a
+     * bluetooth socket. The data that is read will be sent to handler that was set from the Binder.
+     * In the Message, the number of bytes will be sent as arg1 and the message will be sent in
+     * obj parameter as a string.
      */
     private class ReadThread extends Thread {
 
@@ -174,7 +179,7 @@ public class BluetoothService extends Service {
         }
 
         /**
-         * Takes action on a message that was read based on the id.
+         * Parses the buffer into the ID and data. The resulting action depends on the id.
          * Default will send the message to client handler. Hello messages are handled here.
          *
          * @param numBytes size of message
@@ -182,22 +187,27 @@ public class BluetoothService extends Service {
          */
         private void parseMessage(int numBytes, byte[] buffer){
             String message = new String(buffer, 0, numBytes);
-            String message_id = (message.substring(0, Utility.LENGTH_OF_SEND_ID));
+            if(numBytes < 4) {
+                Log.v(TAG, "Got a message with size less than the length of a service id: " + message);
+                return;
+            }
+
+            String message_id = (message.substring(0, ServiceUtility.ID_LENGTH));
 
             Log.v(TAG, "READ INPUT -" + message +"- "+ mAddress);
 
             switch (message_id){
-                case Utility.ID_HELLO:
-                    mBinder.writeMessage(Utility.makeReplyHelloMessage());
+                case ServiceUtility.ID_HELLO:
+                    mBinder.writeMessage(ServiceUtility.makeReplyHelloMessage());
                     break;
 
-                case Utility.ID_HELLO_REPLY:
+                case ServiceUtility.ID_HELLO_REPLY:
                     BluetoothConnectionInfo info = mClients.get(mAddress);
                     if(info != null)
                         info.connectionAttempts = 0;
                     break;
 
-                default:
+                case ServiceUtility.ID_APP_MESSAGE:
                     if(mClientHandler == null) {
                         Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + message);
                         break;
@@ -205,6 +215,9 @@ public class BluetoothService extends Service {
                     Message m = mClientHandler.obtainMessage(0, numBytes, -1, message);
                     mClientHandler.sendMessage(m);
                     break;
+
+                default:
+                    Log.v(TAG, "Unknown message id: " + message_id);
             }
         }
 
@@ -218,30 +231,35 @@ public class BluetoothService extends Service {
             while( !isInterrupted() ){
                 try {
                     numBytes = mInputStream.read(buffer);
-                    parseMessage(numBytes,buffer);
+                    parseMessage(numBytes, buffer);
                 } catch (IOException e) {
                     Log.v(TAG, "READ EXCEPTION: " + mAddress);
                     e.printStackTrace();
                     break;
                 }
             }
-            Log.v(TAG,"CLOSING READING: " + mAddress);
+            Log.v(TAG,"STOPPING READING: " + mAddress);
+            //remove the socket if it isn't being removed already.
             mBinder.removeSocket(mAddress);
         }
     }
 
     /**
-     * Thread that writes to other bluetooth devices.
+     * Thread that writes data to a remote bluetooth device using an outputStream retrieved from a
+     * bluetooth socket.
      */
     private class WriteThread extends Thread{
         private final String mAddress;
         private OutputStream mOutputStream;
         private ArrayBlockingQueue<String> mQueue;
+        /**
+         * when the thread receives this message from the queue, the thread will close.
+         */
         private static final String SHUTDOWN_KEY = "poliknbybdkfnammchyjmdnyukkdujmnyiyrtffsedrae";
 
         /**
          * Creates a thread that writes input using a stream. Communicate to this thread by giving it
-         * messages to send using the blocking queue that is given as  a parameter.
+         * messages to send using the blocking queue that is given as a parameter.
          *
          * @param address mac address of the thread used for debugging
          * @param outputStream output stream of a bluetooth socket
@@ -253,35 +271,26 @@ public class BluetoothService extends Service {
             mQueue = queue;
         }
 
-        /**
-         * Send a message to the attached outputStream
-         *
-         * @param message message to be sent
-         */
-        private void sendMessage(String message){
-            byte[] bytes = message.getBytes();
-
-            try {
-                mOutputStream.write(bytes);
-            } catch (IOException e) {
-                Log.v(TAG, "WRITE EXCEPTION, MESSAGE : " + message + ", ADDRESS " + mAddress);
-                e.printStackTrace();
-            }
-        }
-
         @Override
         public void run() {
             Log.v(TAG, "START WRITING: " + mAddress);
+            String data = "";
+            byte[] bytes;
             while ( !isInterrupted() ){
                 try{
-                    String data = mQueue.take();
+                    data = mQueue.take();
                     if(data.equals( SHUTDOWN_KEY )) {
                         Log.v(TAG, "SHUTDOWN KEY RECEIVED: " + mAddress);
                         break;
                     }
-                    sendMessage(data);
+                    bytes = data.getBytes();
+                    mOutputStream.write(bytes);
                 }catch (InterruptedException e){
                     Log.v(TAG, "WRITE QUEUE EXCEPTION  " + mAddress);
+                    e.printStackTrace();
+                    break;
+                } catch (IOException e) {
+                    Log.v(TAG, "WRITE EXCEPTION, MESSAGE : " + data + ", ADDRESS " + mAddress);
                     e.printStackTrace();
                     break;
                 }
@@ -296,29 +305,36 @@ public class BluetoothService extends Service {
      * Stores data associated with a bluetooth connection
      */
     private class BluetoothConnectionInfo {
+        /**
+         * true if the connection is being deleted.
+         */
         volatile boolean deleting;
+        /**
+         * number of unanswered hello messages
+         */
         int connectionAttempts;
         OutputStream outputStream;
         InputStream inputStream;
-        //threads will be null until they need to run
         Thread writeThread;
         Thread readThread;
         BluetoothSocket socket;
         BluetoothDevice device;
+        /**
+         * used to give writing thread data.
+         */
         ArrayBlockingQueue<String> blockingQueue;
     }
 
     /**
-     * Class that allows for communication with the service. Has four primary steps to setup.
+     * Class that allows for communication with the service. Has Three primary steps to setup.
      * <p>
      * 1. Give the service bluetooth sockets.
      * <p>
      * 2. Give the service the handler from the ui thread.
      * <p>
-     * 3. Enable the socket for reading and writing.
+     * 3. Remove and close sockets.
      * <p>
-     * Sockets can be disabled, re-enabled, and removed. Removed sockets are also closed.
-     * Sockets are automatically disabled and closed when the services onDestroy is called.
+     * Sockets are automatically closed when the services onDestroy is called.
      */
     public class BluetoothBinder extends Binder{
 
@@ -328,7 +344,7 @@ public class BluetoothService extends Service {
          * createRfcommSocketToServiceRecord().connect() for a client.
          *
          * @param socket bluetooth socket that will be added
-         * @return false if output streams could not be created from socekts
+         * @return false if output streams could not be created from socekets
          */
         public boolean addSocket(@NonNull BluetoothSocket socket){
             Log.v(TAG, "adding socket with address " +socket.getRemoteDevice().getAddress());
@@ -435,16 +451,16 @@ public class BluetoothService extends Service {
 
             //Send message to handler
             if(mClientHandler != null){
-                Message m = mClientHandler.obtainMessage(1, macAddress.length(), -1, macAddress);
+                String message = ServiceUtility.makeConnectionClosedMessage(macAddress);
+                Message m = mClientHandler.obtainMessage(0, message.length(), -1, message);
                 mClientHandler.sendMessage(m);
             }
-
         }
 
 
         /**
-         * Write a message to all bluetooth sockets that are enabled. The mac address ia available
-         * using BluetoothSocket.getRemoteDevice().getAddress().
+         * Write a message to all bluetooth sockets that are enabled. The message should always come
+         * from one of the ServiceUtility.make methods.
          *
          * @param message message to be sent
          */
@@ -457,14 +473,15 @@ public class BluetoothService extends Service {
 
         /**
          * write a message to the specified bluetooth device with the specified mac address.The mac
-         * address ia available using BluetoothSocket.getRemoteDevice().getAddress().
+         * address ia available using BluetoothSocket.getRemoteDevice().getAddress(). The message
+         * should always come from one of the ServiceUtility.make methods.
          *
          * @param message message to be sent
          * @param macAddress mac address of the bluetooth device that will have the message sent to
          * @return false if mac address doesn't exist for an added socket.
          */
         public boolean writeMessage(String message, String macAddress){
-            Log.v(TAG, "writeMessage to " + macAddress);
+            Log.v(TAG, "WRITE MESSAGE -"+ message +"- to " + macAddress);
 
             if( !mClients.containsKey(macAddress) )
                 return false;
@@ -499,7 +516,7 @@ public class BluetoothService extends Service {
          *
          * @param handler handler to receive messages.
          */
-        public void setHandler(Handler handler){
+        public void setHandler(@Nullable BluetoothServiceHandler handler){
             mClientHandler = handler;
         }
 
@@ -508,7 +525,7 @@ public class BluetoothService extends Service {
          * Get an instance of the handler that has been set.
          * @return handler that has been set
          */
-        public @Nullable Handler getHandler(){
+        public @Nullable BluetoothServiceHandler getHandler(){
             return mClientHandler;
         }
     }

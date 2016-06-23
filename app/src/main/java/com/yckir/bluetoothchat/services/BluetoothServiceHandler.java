@@ -1,0 +1,57 @@
+package com.yckir.bluetoothchat.services;
+
+
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.widget.Toast;
+
+import com.yckir.bluetoothchat.ChatroomUtility;
+
+/**
+ * Handler that listens to messages from BluetoothService. The abstract methods will be called
+ * from the default handleMessage method. HandleMessage should not be extended, implement the
+ * abstract methods to handle the messages from the service.
+ */
+public abstract class BluetoothServiceHandler extends Handler {
+    public static final String TAG = "BluetoothServiceHandler";
+
+    /**
+     * Called when a connection has closed.
+     *
+     * @param macAddress mac address of the closed connection.
+     */
+    public abstract void connectionClosed(String macAddress);
+
+    /**
+     * message that was sent form a remote bluetooth device and should be parsed by the activity.
+     *
+     * @param message message from remote bluetooth device.
+     */
+    public abstract void appMessage(String message);
+
+    @Override
+    public final void handleMessage(Message msg) {
+        int size = msg.arg1;
+        String serviceMessage = (String)msg.obj;
+
+        String messageId = (serviceMessage.substring(0, ServiceUtility.ID_LENGTH));
+        String messageData = null;
+        if(ServiceUtility.ID_LENGTH != size)
+            messageData = serviceMessage.substring(ServiceUtility.ID_LENGTH, size);
+
+        switch (messageId){
+            case ServiceUtility.ID_APP_MESSAGE:
+                appMessage(messageData);
+                break;
+            case ServiceUtility.ID_CONNECTION_CLOSED:
+            case ServiceUtility.ID_SERVER_NOT_RESPONDING:
+            case ServiceUtility.ID_IO_EXCEPTION:
+                connectionClosed(messageData);
+                break;
+            default:
+                Log.v(TAG, " unknown service message id " + messageId + ", with message " + messageData);
+                break;
+        }
+    }
+}
