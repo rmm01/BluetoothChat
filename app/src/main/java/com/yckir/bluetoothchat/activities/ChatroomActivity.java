@@ -16,7 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.yckir.bluetoothchat.ChatroomUtility;
-import com.yckir.bluetoothchat.PairingSetupUtility;
+
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
@@ -24,6 +24,11 @@ import com.yckir.bluetoothchat.services.BluetoothService;
 
 import java.lang.ref.WeakReference;
 
+/**
+ * It is the job of the server to send a makeServerSetupFinishedMessage to clients so that they
+ * can start the chatroom activity also. EXTRA_SERVER intent extra field tells activity if it is a
+ * server or client.
+ */
 public class ChatroomActivity extends AppCompatActivity {
 
     public static final String TAG = "ChatroomActivity";
@@ -44,6 +49,12 @@ public class ChatroomActivity extends AppCompatActivity {
 
         public MyBluetoothHandler(ChatroomActivity activity){
             mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void serverSetupFinished() {
+            //this should never be called here
+            Log.w(TAG, "Should not have received a call to serverSetupFinished");
         }
 
         @Override
@@ -83,8 +94,7 @@ public class ChatroomActivity extends AppCompatActivity {
             mBinder.setHandler(mBT_Handler);
 
             if(mIsServer) {
-                String appMessage = PairingSetupUtility.makeConnectionReadyMessage();
-                mBinder.writeMessage(ServiceUtility.makeAppMessage(appMessage));
+                mBinder.writeMessage(ServiceUtility.makeServerSetupFinishedMessage());
             }
         }
 

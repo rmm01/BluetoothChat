@@ -27,7 +27,6 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.ChatroomUtility;
 import com.yckir.bluetoothchat.ClientConnectTask;
-import com.yckir.bluetoothchat.PairingSetupUtility;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
@@ -83,8 +82,17 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         }
 
         @Override
+        public void serverSetupFinished() {
+            mActivity.get().mBinder.setHandler(null);
+            mActivity.get().startActivity(new Intent(mActivity.get(), ChatroomActivity.class));
+        }
+
+        @Override
         public void connectionClosed(String macAddress) {
             Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+            mActivity.get().mStatusText.setText(R.string.status_not_finding);
+            mActivity.get().enableBluetoothFields(true);
+            mActivity.get().mBinder.removeSockets();
         }
 
         @Override
@@ -96,18 +104,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                 messageData = message.substring(ServiceUtility.ID_LENGTH, message.length());
 
             switch (message_id) {
-                case PairingSetupUtility.ID_CONNECTION_READY:
-                    mActivity.get().mBinder.setHandler(null);
-                    mActivity.get().startActivity(new Intent(mActivity.get(), ChatroomActivity.class));
-                    break;
-                case PairingSetupUtility.ID_CONNECTION_DECLINE:
-                    Toast.makeText(mActivity.get(), "The Server has declined the connection", Toast.LENGTH_LONG).show();
-                    mActivity.get().mStatusText.setText(R.string.status_connect_declined);
-                    mActivity.get().enableBluetoothFields(true);
-                    mActivity.get().mBinder.removeSockets();
-                    break;
                 default:
-                    Log.v(TAG, " unknown message id " + message_id + ", with message " + messageData);
+                    Log.v(TAG, " unknown app message id " + message_id + ", with message " + messageData);
                     break;
             }
         }

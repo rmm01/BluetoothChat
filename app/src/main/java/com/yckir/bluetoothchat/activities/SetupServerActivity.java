@@ -8,9 +8,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -21,7 +19,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.yckir.bluetoothchat.PairingSetupUtility;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.ServerAcceptTask;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
@@ -95,6 +92,12 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         public MyBluetoothHandler(SetupServerActivity activity){
             mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void serverSetupFinished() {
+            //this should never be called here
+            Log.w(TAG, "Should not have received a call to serverSetupFinished");
         }
 
         @Override
@@ -364,11 +367,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         String address;
         for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
             address = socket.getRemoteDevice().getAddress();
-            String appMessage = PairingSetupUtility.makeConnectionDeclinedMessage();
-            mBinder.writeMessage(ServiceUtility.makeAppMessage(appMessage), address);
-
+            mBinder.writeMessage(ServiceUtility.makeServerKickedMessage(), address);
             mBinder.removeSocket(address);
-
         }
         mBinder.setHandler(null);
         Intent intent = new Intent(this, ChatroomActivity.class);

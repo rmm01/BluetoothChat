@@ -206,7 +206,11 @@ public class BluetoothService extends Service {
                     if(info != null)
                         info.connectionAttempts = 0;
                     break;
+                case ServiceUtility.ID_KICKED_FROM_SERVER:
+                    mBinder.removeSocket(mAddress);
+                    break;
 
+                case ServiceUtility.ID_SERVER_SETUP_FINISHED:
                 case ServiceUtility.ID_APP_MESSAGE:
                     if(mClientHandler == null) {
                         Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + message);

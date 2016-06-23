@@ -4,9 +4,6 @@ package com.yckir.bluetoothchat.services;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
-
-import com.yckir.bluetoothchat.ChatroomUtility;
 
 /**
  * Handler that listens to messages from BluetoothService. The abstract methods will be called
@@ -30,6 +27,12 @@ public abstract class BluetoothServiceHandler extends Handler {
      */
     public abstract void appMessage(String message);
 
+    /**
+     * Tells client that the server has finished setting up and it can
+     *  start the activity that will be using bluetooth communication.
+     */
+    public abstract void serverSetupFinished();
+
     @Override
     public final void handleMessage(Message msg) {
         int size = msg.arg1;
@@ -44,7 +47,11 @@ public abstract class BluetoothServiceHandler extends Handler {
             case ServiceUtility.ID_APP_MESSAGE:
                 appMessage(messageData);
                 break;
+            case ServiceUtility.ID_SERVER_SETUP_FINISHED:
+                serverSetupFinished();
+                break;
             case ServiceUtility.ID_CONNECTION_CLOSED:
+            case ServiceUtility.ID_KICKED_FROM_SERVER:
             case ServiceUtility.ID_SERVER_NOT_RESPONDING:
             case ServiceUtility.ID_IO_EXCEPTION:
                 connectionClosed(messageData);

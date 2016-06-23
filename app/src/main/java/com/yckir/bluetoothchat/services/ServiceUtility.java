@@ -23,7 +23,9 @@ public class ServiceUtility {
     public static final String ID_CONNECTION_CLOSED        = "1100";
     public static final String ID_SERVER_NOT_RESPONDING    = "1101";
     public static final String ID_IO_EXCEPTION             = "1102";
-    public static final String ID_APP_MESSAGE              = "1103";
+    public static final String ID_KICKED_FROM_SERVER       = "1103";
+    public static final String ID_SERVER_SETUP_FINISHED    = "1104";
+    public static final String ID_APP_MESSAGE              = "1105";
 
     /**
      * @return the UUID for bluetooth communication
@@ -72,5 +74,25 @@ public class ServiceUtility {
      */
     public static String makeConnectionClosedMessage(String macAddress){
         return ID_CONNECTION_CLOSED + macAddress;
+    }
+
+    /**
+     * Makes a message that tells the clients that the Server has finished setting up and is  in
+     * the chatroom. PairingActivity. Upon receiving this message the client will then start the
+     * ChatroomActivity. This message should only be used by the server.
+     *
+     * @return  message that says that the server has finished setting up.
+     */
+    public static String makeServerSetupFinishedMessage(){
+        return ID_SERVER_SETUP_FINISHED;
+    }
+
+    /**
+     * Makes a message that says the recipient has been kicked from the server.
+     *
+     * @return the message to be sent to remote bluetooth device.
+     */
+    public static String makeServerKickedMessage(){
+        return ID_KICKED_FROM_SERVER;
     }
 }
