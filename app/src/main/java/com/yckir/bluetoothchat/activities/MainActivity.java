@@ -64,6 +64,8 @@ public class MainActivity extends AppCompatActivity{
             if(mBlueToothAdapter.isEnabled()) {
                 startActivity(new Intent(this, SetupServerActivity.class));
                 return true;
+            }else{
+                Toast.makeText(MainActivity.this, "Bluetooth not enabled", Toast.LENGTH_SHORT).show();
             }
         }
         if (id == R.id.action_join) {

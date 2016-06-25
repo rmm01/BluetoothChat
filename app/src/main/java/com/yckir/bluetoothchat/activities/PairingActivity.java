@@ -45,6 +45,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private static final String TAG = "PairingActivity";
 
     private TextView mBlueToothName;
+    private TextView mBlueToothAddress;
     private TextView mDiscoverable;
     private TextView mFindDevices;
     private TextView mStatusText;
@@ -179,7 +180,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             return;
         }
 
-        mBlueToothName = (TextView)findViewById(R.id.bluetooth_name);
+        mBlueToothName = (TextView)findViewById(R.id.client_bluetooth_name);
+        mBlueToothAddress = (TextView)findViewById(R.id.client_bluetooth_address);
         mDiscoverable = (TextView)findViewById(R.id.enable_discovery_label);
         mFindDevices = (TextView)findViewById(R.id.find_devices_prompt);
         mStatusText = (TextView)findViewById(R.id.status_message);
@@ -208,6 +210,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         //set default state
         mBlueToothName.setText( mBluetoothAdapter.getName() );
+        mBlueToothAddress.setText( mBluetoothAdapter.getAddress() );
         mDiscoverableWheel.stopSpinning();
         mFindDevicesWheel.stopSpinning();
         mBluetoothSwitch.setChecked(mBluetoothAdapter.isEnabled());

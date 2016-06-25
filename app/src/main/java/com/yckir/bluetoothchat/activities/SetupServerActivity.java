@@ -52,6 +52,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private Button mStartButton;
     private TextView mBlueToothName;
+    private TextView mBlueAddress;
     private TextView mStatusText;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
@@ -138,8 +139,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         mStartButton = (Button)findViewById(R.id.start_button);
         mStatusText = (TextView)findViewById(R.id.status_message);
-        mBlueToothName = (TextView)findViewById(R.id.bluetooth_name);
+        mBlueToothName = (TextView)findViewById(R.id.server_bluetooth_name);
+        mBlueAddress = (TextView)findViewById(R.id.server_bluetooth_address);
         mBlueToothName.setText( mBluetoothAdapter.getName() );
+        mBlueAddress.setText( mBluetoothAdapter.getAddress() );
 
         mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
         if(mConnectedRecyclerView != null)
