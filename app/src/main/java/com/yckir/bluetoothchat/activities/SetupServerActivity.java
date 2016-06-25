@@ -101,14 +101,15 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
 
         @Override
-        public void connectionClosed(String macAddress) {
+        public void connectionClosed(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode) {
             mActivity.get().mUnconnectedAdapter.removeItem(macAddress);
             mActivity.get().mConnectedAdapter.removeItem(macAddress);
             if(mActivity.get().mConnectedAdapter.getItemCount() < 1) {
                 mActivity.get().mStartButton.setEnabled(false);
                 mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
             }
-            Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+            Toast.makeText(mActivity.get(), ServiceUtility.getCloseCodeInfo(closeCode) +
+                    ": disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
         }
 
         @Override
@@ -367,8 +368,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         String address;
         for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
             address = socket.getRemoteDevice().getAddress();
-            mBinder.writeMessage(ServiceUtility.makeServerKickedMessage(), address);
-            mBinder.removeSocket(address);
+            mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
         }
         mBinder.setHandler(null);
         Intent intent = new Intent(this, ChatroomActivity.class);

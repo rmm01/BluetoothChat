@@ -9,9 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -88,11 +86,11 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         }
 
         @Override
-        public void connectionClosed(String macAddress) {
-            Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+        public void connectionClosed(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode) {
+            Toast.makeText(mActivity.get(), ServiceUtility.getCloseCodeInfo(closeCode) +
+                    ": disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
             mActivity.get().mStatusText.setText(R.string.status_not_finding);
             mActivity.get().enableBluetoothFields(true);
-            mActivity.get().mBinder.removeSockets();
         }
 
         @Override
@@ -307,7 +305,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mStatusText.setText(R.string.status_connect_canceled);
         mCancelConnectionButton.setVisibility(View.INVISIBLE);
         enableBluetoothFields(true);
-        mBinder.removeSockets();
+        mBinder.removeSockets(ServiceUtility.CLOSE_SAY_GOODBYE);
     }
 
     @Override

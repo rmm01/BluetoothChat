@@ -12,13 +12,14 @@ import android.util.Log;
  */
 public abstract class BluetoothServiceHandler extends Handler {
     public static final String TAG = "BluetoothServiceHandler";
+    public static final String EXTRA_MAC_ADDRESS = "BluetoothServiceHandler:EXTRA_MAC_ADDRESS";
 
     /**
      * Called when a connection has closed.
      *
      * @param macAddress mac address of the closed connection.
      */
-    public abstract void connectionClosed(String macAddress);
+    public abstract void connectionClosed(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode);
 
     /**
      * message that was sent form a remote bluetooth device and should be parsed by the activity.
@@ -51,10 +52,8 @@ public abstract class BluetoothServiceHandler extends Handler {
                 serverSetupFinished();
                 break;
             case ServiceUtility.ID_CONNECTION_CLOSED:
-            case ServiceUtility.ID_KICKED_FROM_SERVER:
-            case ServiceUtility.ID_SERVER_NOT_RESPONDING:
-            case ServiceUtility.ID_IO_EXCEPTION:
-                connectionClosed(messageData);
+                @ServiceUtility.CLOSE_CODE int closeCode =  Integer.parseInt( messageData);
+                connectionClosed(msg.getData().getString(EXTRA_MAC_ADDRESS), closeCode);
                 break;
             default:
                 Log.v(TAG, " unknown service message id " + messageId + ", with message " + messageData);

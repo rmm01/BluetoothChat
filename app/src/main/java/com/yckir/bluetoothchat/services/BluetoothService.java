@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -57,7 +58,7 @@ public class BluetoothService extends Service {
             for(BluetoothConnectionInfo info : mService.get().mClients.values()){
                 if(info.connectionAttempts >= MAX_CONNECTION_ATTEMPTS){
                     Log.v(TAG, "timeout has occurred: " + info.device.getAddress());
-                    mService.get().mBinder.removeSocket(info.device.getAddress());
+                    mService.get().mBinder.removeSocket(info.device.getAddress(), ServiceUtility.CLOSE_SERVER_NOT_RESPONDING);
                 }else{
                     info.connectionAttempts++;
                     if(info.connectionAttempts >1)
@@ -150,7 +151,7 @@ public class BluetoothService extends Service {
 
     @Override
     public void onDestroy() {
-        mBinder.removeSockets();
+        mBinder.removeSockets(ServiceUtility.CLOSE_SERVICE_DESTROYED);
     }
 
     /**
@@ -193,6 +194,7 @@ public class BluetoothService extends Service {
             }
 
             String message_id = (message.substring(0, ServiceUtility.ID_LENGTH));
+            String message_data = (message.substring(ServiceUtility.ID_LENGTH));
 
             Log.v(TAG, "READ INPUT -" + message +"- "+ mAddress);
 
@@ -206,10 +208,17 @@ public class BluetoothService extends Service {
                     if(info != null)
                         info.connectionAttempts = 0;
                     break;
-                case ServiceUtility.ID_KICKED_FROM_SERVER:
-                    mBinder.removeSocket(mAddress);
+                case ServiceUtility.ID_CONNECTION_CLOSED:
+                    //only kicked and goodbye close messages are sent over bluetooth, the
+                    //other close messages are errors that force the connection to close immediately.
+                    @ServiceUtility.CLOSE_CODE int closeCode =  Integer.parseInt( message_data);
+                    if(closeCode == ServiceUtility.CLOSE_KICKED_FROM_SERVER)
+                        mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
+                    else if(closeCode == ServiceUtility.CLOSE_SAY_GOODBYE){
+                        mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_GET_GOODBYE);
+                    }else
+                        Log.w(TAG, "Read invalid close code " + closeCode);
                     break;
-
                 case ServiceUtility.ID_SERVER_SETUP_FINISHED:
                 case ServiceUtility.ID_APP_MESSAGE:
                     if(mClientHandler == null) {
@@ -239,12 +248,12 @@ public class BluetoothService extends Service {
                 } catch (IOException e) {
                     Log.v(TAG, "READ EXCEPTION: " + mAddress);
                     e.printStackTrace();
-                    break;
+                    mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_READ_CLOSE);
+                    return;
                 }
             }
-            Log.v(TAG,"STOPPING READING: " + mAddress);
-            //remove the socket if it isn't being removed already.
-            mBinder.removeSocket(mAddress);
+            Log.v(TAG,"READING INTERRUPTED: " + mAddress);
+            mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_READ_CLOSE);
         }
     }
 
@@ -285,23 +294,25 @@ public class BluetoothService extends Service {
                     data = mQueue.take();
                     if(data.equals( SHUTDOWN_KEY )) {
                         Log.v(TAG, "SHUTDOWN KEY RECEIVED: " + mAddress);
-                        break;
+                        mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
+                        return;
                     }
                     bytes = data.getBytes();
                     mOutputStream.write(bytes);
                 }catch (InterruptedException e){
                     Log.v(TAG, "WRITE QUEUE EXCEPTION  " + mAddress);
                     e.printStackTrace();
-                    break;
+                    mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
+                    return;
                 } catch (IOException e) {
                     Log.v(TAG, "WRITE EXCEPTION, MESSAGE : " + data + ", ADDRESS " + mAddress);
                     e.printStackTrace();
-                    break;
+                    mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
+                    return;
                 }
             }
-
-            Log.v(TAG,"CLOSING WRITING: " + mAddress);
-            mBinder.removeSocket(mAddress);
+            Log.v(TAG,"CLOSING INTERRUPTED: " + mAddress);
+            mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
         }
     }
 
@@ -402,11 +413,13 @@ public class BluetoothService extends Service {
 
         /**
          * Removes and closes all sockets that have been added. The reading and writing will
-         *  also stop for that socket if it hasn't already.
+         * also stop for that socket if it hasn't already.
+         *
+         * @param closeCode id that identifies why the socket is being closed
          */
-        public void removeSockets(){
+        public void removeSockets(@ServiceUtility.CLOSE_CODE int closeCode){
             for(BluetoothConnectionInfo tmpInfo: mClients.values()){
-                removeSocket(tmpInfo.device.getAddress());
+                removeSocket(tmpInfo.device.getAddress(), closeCode);
             }
         }
 
@@ -416,8 +429,9 @@ public class BluetoothService extends Service {
          * writing will also stop for that socket.
          *
          * @param macAddress mac address of the bluetooth device that will have the message sent to
+         * @param closeCode id that identifies why the socket is being closed
          */
-        public void removeSocket(String macAddress){
+        public void removeSocket(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode){
             BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
 
             //if cant find connection or already deleting, return
@@ -425,10 +439,16 @@ public class BluetoothService extends Service {
                 return;
             tmpInfo.deleting = true;
 
-            Log.v(TAG, "removeSocket for " + macAddress);
+            Log.v(TAG, closeCode +": removeSocket for " + macAddress);
+
+            if(closeCode == ServiceUtility.CLOSE_KICKED_FROM_SERVER ||
+                    closeCode == ServiceUtility.CLOSE_SAY_GOODBYE){
+                writeMessage(ServiceUtility.makeCloseMessage(closeCode), macAddress);
+            }
 
             disableRW(tmpInfo);
 
+            //TODO delay rest of code so that socket isn't closed before close message is read
             try {
                 Log.v(TAG, "closing the input stream: " + macAddress);
                 tmpInfo.inputStream.close();
@@ -455,8 +475,12 @@ public class BluetoothService extends Service {
 
             //Send message to handler
             if(mClientHandler != null){
-                String message = ServiceUtility.makeConnectionClosedMessage(macAddress);
+                String message = ServiceUtility.makeCloseMessage(closeCode);
+
                 Message m = mClientHandler.obtainMessage(0, message.length(), -1, message);
+                Bundle data = new Bundle(1);
+                data.putString(BluetoothServiceHandler.EXTRA_MAC_ADDRESS, macAddress);
+                m.setData(data);
                 mClientHandler.sendMessage(m);
             }
         }

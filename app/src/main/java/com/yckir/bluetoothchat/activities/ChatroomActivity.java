@@ -58,8 +58,9 @@ public class ChatroomActivity extends AppCompatActivity {
         }
 
         @Override
-        public void connectionClosed(String macAddress) {
-            Toast.makeText(mActivity.get(), "disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+        public void connectionClosed(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode) {
+            Toast.makeText(mActivity.get(), ServiceUtility.getCloseCodeInfo(closeCode) +
+                    ": disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
             //TODO if server, tell all clients that somebody disconnected.
         }
 
