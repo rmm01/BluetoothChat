@@ -18,6 +18,8 @@
     <string name="accepted_clients_label">Accepted clients</string>
     <string name="found_clients_label">Found clients</string>
     <string name="start_chatroom_label">Start Chatroom</string>
+    <string name="menu_swap">swap</string>
+    <string name="menu_remove">remove</string>
 
     <!-- SetupServerActivity status -->
     <string name="status_no_clients">Waiting for a client to connect</string>
