@@ -11,9 +11,15 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.ActionMode;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
+
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -50,6 +56,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private BluetoothAdapter mBluetoothAdapter;
 
+    private ActionMode mActionMode;
     private Button mStartButton;
     private TextView mBlueToothName;
     private TextView mBlueAddress;
@@ -119,6 +126,73 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
     }
 
+    /**
+     * Receives callbacks for the action mode that appears when a recycler item is clicked.
+     */
+    private class MyActionModeCallback implements ActionMode.Callback{
+        private BluetoothSocket mSocket;
+
+        /**
+         * @param socket socket of the recycler item that was clicked.
+         */
+        public MyActionModeCallback(BluetoothSocket socket){
+            mSocket = socket;
+        }
+
+        @Override
+        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            MenuInflater inflater = mode.getMenuInflater();
+            inflater.inflate(R.menu.setup_server_recycler_item, menu);
+            return true;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            return false;
+        }
+
+        @Override
+        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+
+            String address = mSocket.getRemoteDevice().getAddress();
+
+            switch (item.getItemId()){
+                case R.id.menu_remove:
+                    mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
+                    mode.finish();
+                    return true;
+                case R.id.menu_swap:
+                    //swap the location of the recycler item
+                    if(mUnconnectedAdapter.contains(address) ) {
+                        mConnectedAdapter.addItem(mSocket.getRemoteDevice(), mSocket);
+                        mUnconnectedAdapter.removeItem(address);
+                    }else{
+                        mConnectedAdapter.removeItem(address);
+                        mUnconnectedAdapter.addItem(mSocket.getRemoteDevice(), mSocket);
+                    }
+
+                    //update status of ui message
+                    if(mConnectedAdapter.getItemCount() > 0){
+                        mStartButton.setEnabled(true);
+                        mStatusText.setText(R.string.status_accepted_clients);
+                    }else {
+                        mStartButton.setEnabled(false);
+                        mStatusText.setText(R.string.status_no_accepted_clients);
+
+                    }
+                    mode.finish();
+                    return true;
+                }
+                return false;
+
+        }
+
+        @Override
+        public void onDestroyActionMode(ActionMode mode) {
+            mActionMode = null;
+        }
+    }
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -135,7 +209,9 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             bluetoothOff();
         }
 
-        setContentView(R.layout.activity_setup_server);
+        setContentView(R.layout.activity_setup);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         mStartButton = (Button)findViewById(R.id.start_button);
         mStatusText = (TextView)findViewById(R.id.status_message);
@@ -347,20 +423,9 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     @Override
     public void BTF_ItemClick(BluetoothDevice device, BluetoothSocket socket) {
-        if(mUnconnectedAdapter.contains(device.getAddress()) ) {
-            mConnectedAdapter.addItem(device, socket);
-            mUnconnectedAdapter.removeItem(device,socket);
-        }else{
-            mConnectedAdapter.removeItem(device, socket);
-            mUnconnectedAdapter.addItem(device,socket);
-        }
-        if(mConnectedAdapter.getItemCount() > 0){
-            mStartButton.setEnabled(true);
-            mStatusText.setText(R.string.status_accepted_clients);
-        }else{
-            mStartButton.setEnabled(false);
-            mStatusText.setText(R.string.status_no_accepted_clients);
-        }
+        if(mActionMode!= null)
+            return;
+        mActionMode = startSupportActionMode(new MyActionModeCallback(socket));
     }
 
     public void startChatroom(View view){
