@@ -75,7 +75,7 @@ public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocket
             if(device.getAddress().equals(address)) {
                 mDevices.remove(i);
                 mSockets.remove(i);
-                return;
+                break;
             }
             i++;
         }

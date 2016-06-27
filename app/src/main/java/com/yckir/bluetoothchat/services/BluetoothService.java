@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -418,8 +419,10 @@ public class BluetoothService extends Service {
          * @param closeCode id that identifies why the socket is being closed
          */
         public void removeSockets(@ServiceUtility.CLOSE_CODE int closeCode){
-            for(BluetoothConnectionInfo tmpInfo: mClients.values()){
-                removeSocket(tmpInfo.device.getAddress(), closeCode);
+
+            ArrayList<BluetoothConnectionInfo> list = new ArrayList<>(mClients.values());
+            for(int i = 0; i < list.size(); i++){
+                removeSocket(list.get(i).device.getAddress(), closeCode);
             }
         }
 
