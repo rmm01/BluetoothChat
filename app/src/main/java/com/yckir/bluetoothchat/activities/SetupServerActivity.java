@@ -57,6 +57,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private BluetoothAdapter mBluetoothAdapter;
 
     private ActionMode mActionMode;
+    private MyActionModeCallback mActionCallback;
     private Button mStartButton;
     private TextView mBlueToothName;
     private TextView mBlueAddress;
@@ -116,8 +117,16 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
                 mActivity.get().mStartButton.setEnabled(false);
                 mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
             }
+
+            //close acton mode if it is open for the disconnected device
+            if(mActivity.get().mActionCallback != null
+                    && mActivity.get().mActionCallback.getAddress().equals(macAddress)){
+                mActivity.get().mActionMode.finish();
+            }
+
             Toast.makeText(mActivity.get(), ServiceUtility.getCloseCodeInfo(closeCode) +
                     ": disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
+
         }
 
         @Override
@@ -127,19 +136,32 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     /**
-     * Receives callbacks for the action mode that appears when a recycler item is clicked.
+     * Receives callbacks for the action mode that appears when a recycler item is clicked. The item
+     * will remain selected while action mode is visible and be unselected if the device disconnects
+     * or the the action mode finishes and is being destroyed. The action will either swap which
+     * recycler view it is in, or close the connection with that device.
      */
     private class MyActionModeCallback implements ActionMode.Callback{
         private BluetoothSocket mSocket;
         private View mSelectedView;
+        private String mAddress;
 
         /**
+         * Action mode callback for when a recycler item is selected.
+         *
+         * @param view view that is starting the action mode
          * @param socket socket of the recycler item that was clicked.
          */
         public MyActionModeCallback(View view, BluetoothSocket socket){
             mSelectedView = view;
             mSocket = socket;
+            mAddress = socket.getRemoteDevice().getAddress();
         }
+
+        /**
+         * @return the mac address of the item that started the action mode.
+         */
+        public String getAddress(){return mAddress;}
 
         @Override
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
@@ -194,6 +216,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         public void onDestroyActionMode(ActionMode mode) {
             mSelectedView.setSelected(false);
             mActionMode = null;
+            mActionCallback = null;
         }
     }
 
@@ -430,7 +453,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         if(mActionMode!= null)
             return;
 
-        mActionMode = startSupportActionMode(new MyActionModeCallback(selectedView, socket));
+        mActionCallback = new MyActionModeCallback(selectedView, socket);
+        mActionMode = startSupportActionMode(mActionCallback);
     }
 
     public void startChatroom(View view){
