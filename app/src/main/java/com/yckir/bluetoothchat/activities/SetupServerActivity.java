@@ -32,7 +32,7 @@ import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
-import com.yckir.bluetoothchat.recyle_adapters.BluetoothSocketAdapter;
+import com.yckir.bluetoothchat.recyle_adapters.BluetoothServerAdapter;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
 
@@ -46,7 +46,7 @@ import java.lang.ref.WeakReference;
  * unregistered in onStart and onStop.
  */
 public class SetupServerActivity extends AppCompatActivity implements BlueToothStatusListener,
-        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener, ServerAcceptTask.ServerEventListener, BluetoothSocketAdapter.BTF_ClickListener {
+        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener, ServerAcceptTask.ServerEventListener, BluetoothServerAdapter.BTF_ClickListener {
 
     private static final String TAG = "SetupServer";
     private static final int DISCOVERY_DURATION = 180;
@@ -63,8 +63,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private TextView mStatusText;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
-    private BluetoothSocketAdapter mConnectedAdapter;
-    private BluetoothSocketAdapter mUnconnectedAdapter;
+    private BluetoothServerAdapter mConnectedAdapter;
+    private BluetoothServerAdapter mUnconnectedAdapter;
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
@@ -131,11 +131,13 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
      */
     private class MyActionModeCallback implements ActionMode.Callback{
         private BluetoothSocket mSocket;
+        private View mSelectedView;
 
         /**
          * @param socket socket of the recycler item that was clicked.
          */
-        public MyActionModeCallback(BluetoothSocket socket){
+        public MyActionModeCallback(View view, BluetoothSocket socket){
+            mSelectedView = view;
             mSocket = socket;
         }
 
@@ -148,6 +150,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         @Override
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            mSelectedView.setSelected(true);
             return false;
         }
 
@@ -189,6 +192,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         @Override
         public void onDestroyActionMode(ActionMode mode) {
+            mSelectedView.setSelected(false);
             mActionMode = null;
         }
     }
@@ -223,7 +227,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
         if(mConnectedRecyclerView != null)
             mConnectedRecyclerView.setHasFixedSize(true);
-        mConnectedAdapter = new BluetoothSocketAdapter();
+        mConnectedAdapter = new BluetoothServerAdapter();
         mConnectedAdapter.setRecyclerItemListener(this);
         mConnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mConnectedRecyclerView.setAdapter(mConnectedAdapter);
@@ -231,7 +235,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mUnconnectedRecyclerView = (RecyclerView)findViewById(R.id.unconnected_devices_recycler_view);
         if(mUnconnectedRecyclerView != null)
             mUnconnectedRecyclerView.setHasFixedSize(true);
-        mUnconnectedAdapter = new BluetoothSocketAdapter();
+        mUnconnectedAdapter = new BluetoothServerAdapter();
         mUnconnectedAdapter.setRecyclerItemListener(this);
         mUnconnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mUnconnectedRecyclerView.setAdapter(mUnconnectedAdapter);
@@ -422,10 +426,11 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     @Override
-    public void BTF_ItemClick(BluetoothDevice device, BluetoothSocket socket) {
+    public void BTF_ItemClick(View selectedView, BluetoothDevice device, BluetoothSocket socket) {
         if(mActionMode!= null)
             return;
-        mActionMode = startSupportActionMode(new MyActionModeCallback(socket));
+
+        mActionMode = startSupportActionMode(new MyActionModeCallback(selectedView, socket));
     }
 
     public void startChatroom(View view){

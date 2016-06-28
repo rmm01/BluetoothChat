@@ -2,6 +2,11 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:background="@drawable/recycler_item_selector"
+    android:paddingLeft="20dp"
+    android:paddingStart="20dp"
+    android:paddingRight="20dp"
+    android:paddingEnd="20dp"
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">

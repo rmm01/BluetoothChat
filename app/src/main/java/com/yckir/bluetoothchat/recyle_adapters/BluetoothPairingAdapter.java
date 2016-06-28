@@ -12,12 +12,12 @@ import com.yckir.bluetoothchat.R;
 
 import java.util.ArrayList;
 
-public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAdapter.MyViewHolder>{
+public class BluetoothPairingAdapter extends RecyclerView.Adapter<BluetoothPairingAdapter.MyViewHolder>{
 
     ArrayList<BluetoothDevice> mDevices;
     private BTF_ClickListener mListener = null;
 
-    public BluetoothFoundAdapter(){
+    public BluetoothPairingAdapter(){
         mDevices = new ArrayList<>(10);
     }
 
@@ -28,7 +28,7 @@ public class BluetoothFoundAdapter extends RecyclerView.Adapter<BluetoothFoundAd
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.bluetooth_found, parent, false);
+                .inflate(R.layout.recycler_item, parent, false);
 
         return new MyViewHolder(v);
     }

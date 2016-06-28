@@ -31,7 +31,7 @@ import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
-import com.yckir.bluetoothchat.recyle_adapters.BluetoothFoundAdapter;
+import com.yckir.bluetoothchat.recyle_adapters.BluetoothPairingAdapter;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
 import java.lang.ref.WeakReference;
@@ -40,7 +40,7 @@ import java.util.Set;
 
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
         BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
-        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothFoundAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
+        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothPairingAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
 
     private static final String TAG = "PairingActivity";
 
@@ -60,9 +60,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private BluetoothDiscoverReceiver mBTDReceiver = null;
 
     private RecyclerView mPairedRecyclerView;
-    private BluetoothFoundAdapter mPairedAdapter;
+    private BluetoothPairingAdapter mPairedAdapter;
     private RecyclerView mFoundRecyclerView;
-    private BluetoothFoundAdapter mFoundAdapter;
+    private BluetoothPairingAdapter mFoundAdapter;
 
     private ClientConnectTask mClientTask;
 
@@ -194,7 +194,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         if(mPairedRecyclerView != null)
             mPairedRecyclerView.setHasFixedSize(true);
-        mPairedAdapter = new BluetoothFoundAdapter();
+        mPairedAdapter = new BluetoothPairingAdapter();
         mPairedAdapter.updateItems(getPairs());
         mPairedAdapter.setRecyclerItemListener(this);
         mPairedRecyclerView.setAdapter(mPairedAdapter);
@@ -203,7 +203,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mFoundRecyclerView = (RecyclerView)findViewById(R.id.found_devices_recycler_view);
         if(mFoundRecyclerView != null)
             mFoundRecyclerView.setHasFixedSize(true);
-        mFoundAdapter = new BluetoothFoundAdapter();
+        mFoundAdapter = new BluetoothPairingAdapter();
         mFoundAdapter.setRecyclerItemListener(this);
         mFoundRecyclerView.setAdapter(mFoundAdapter);
         mFoundRecyclerView.setLayoutManager(new LinearLayoutManager(this));

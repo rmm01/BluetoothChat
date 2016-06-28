@@ -13,13 +13,13 @@ import com.yckir.bluetoothchat.R;
 
 import java.util.ArrayList;
 
-public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocketAdapter.MyViewHolder>{
+public class BluetoothServerAdapter extends RecyclerView.Adapter<BluetoothServerAdapter.MyViewHolder>{
 
     ArrayList<BluetoothDevice> mDevices;
     ArrayList<BluetoothSocket> mSockets;
     private BTF_ClickListener mListener = null;
 
-    public BluetoothSocketAdapter(){
+    public BluetoothServerAdapter(){
         mDevices = new ArrayList<>(10);
         mSockets = new ArrayList<>(10);
     }
@@ -31,7 +31,7 @@ public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocket
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.bluetooth_found, parent, false);
+                .inflate(R.layout.recycler_item, parent, false);
 
         return new MyViewHolder(v);
     }
@@ -104,7 +104,7 @@ public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocket
     }
 
     public interface BTF_ClickListener{
-        void BTF_ItemClick(BluetoothDevice device, BluetoothSocket socket);
+        void BTF_ItemClick(View selectedView, BluetoothDevice device, BluetoothSocket socket);
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -121,7 +121,7 @@ public class BluetoothSocketAdapter extends RecyclerView.Adapter<BluetoothSocket
         @Override
         public void onClick(View v) {
             if(mListener != null)
-                mListener.BTF_ItemClick(mDevices.get(getAdapterPosition()), mSockets.get(getAdapterPosition()));
+                mListener.BTF_ItemClick(v, mDevices.get(getAdapterPosition()), mSockets.get(getAdapterPosition()));
         }
     }
 }
