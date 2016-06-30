@@ -29,7 +29,6 @@ import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
-import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.recyle_adapters.BluetoothPairingAdapter;
 import com.yckir.bluetoothchat.services.BluetoothService;
@@ -39,24 +38,20 @@ import java.util.ArrayList;
 import java.util.Set;
 
 public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
-        BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
-        BluetoothDiscoverReceiver.BlueToothDiscoverListener, BluetoothPairingAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
+        BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverReceiver.BlueToothDiscoverListener,
+        BluetoothPairingAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
 
     private static final String TAG = "PairingActivity";
 
     private TextView mBlueToothName;
     private TextView mBlueToothAddress;
-    private TextView mDiscoverable;
     private TextView mFindDevices;
     private TextView mStatusText;
     private Button mCancelConnectionButton;
-    private SwitchCompat mBluetoothSwitch;
-    private ProgressWheel mDiscoverableWheel;
     private ProgressWheel mFindDevicesWheel;
     private BluetoothAdapter mBluetoothAdapter;
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
-    private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
     private BluetoothDiscoverReceiver mBTDReceiver = null;
 
     private RecyclerView mPairedRecyclerView;
@@ -149,10 +144,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     private void enableBluetoothFields(boolean enabled){
 
         //if one of the fields is enabled and the parameter is the same, do nothing since state is already correct
-        if(enabled == mDiscoverable.isEnabled())
+        if(enabled == mFindDevices.isEnabled())
             return;
 
-        mDiscoverable.setEnabled(enabled);
         mFindDevices.setEnabled(enabled);
 
         if(enabled) {
@@ -163,7 +157,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mPairedRecyclerView.setVisibility(View.INVISIBLE);
             mFoundRecyclerView.setVisibility(View.INVISIBLE);
             mFoundAdapter.clearData();
-            mDiscoverableWheel.stopSpinning();
             mFindDevicesWheel.stopSpinning();
         }
     }
@@ -182,12 +175,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
 
         mBlueToothName = (TextView)findViewById(R.id.client_bluetooth_name);
         mBlueToothAddress = (TextView)findViewById(R.id.client_bluetooth_address);
-        mDiscoverable = (TextView)findViewById(R.id.enable_discovery_label);
         mFindDevices = (TextView)findViewById(R.id.find_devices_prompt);
         mStatusText = (TextView)findViewById(R.id.status_message);
         mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
-        mBluetoothSwitch = (SwitchCompat)findViewById(R.id.enable_blue_tooth);
-        mDiscoverableWheel = (ProgressWheel)findViewById(R.id.enable_discovery);
         mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
 
         mPairedRecyclerView = (RecyclerView) findViewById(R.id.paired_devices_recycler_view);
@@ -211,12 +201,8 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         //set default state
         mBlueToothName.setText( mBluetoothAdapter.getName() );
         mBlueToothAddress.setText( mBluetoothAdapter.getAddress() );
-        mDiscoverableWheel.stopSpinning();
         mFindDevicesWheel.stopSpinning();
-        mBluetoothSwitch.setChecked(mBluetoothAdapter.isEnabled());
         enableBluetoothFields(mBluetoothAdapter.isEnabled());
-
-        mBluetoothSwitch.setOnCheckedChangeListener(this);
 
         mHandler = new MyBluetoothHandler(this);
 
@@ -228,14 +214,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     protected void onStart() {
         super.onStart();
 
-        mBluetoothSwitch.setChecked(mBluetoothAdapter.isEnabled());
-
-        //set the spinner progress bar to the correct state if the activity is coming from foreground
-        if(mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)
-            mDiscoverableWheel.spin();
-        else
-            mDiscoverableWheel.stopSpinning();
-
         //set the spinner progress bar to the correct state if the activity is coming from foreground
         if(mBluetoothAdapter.isDiscovering())
             mFindDevicesWheel.spin();
@@ -246,10 +224,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             mBTStatusReceiver = new BluetoothStatusReceiver();
             mBTStatusReceiver.setListener(this);
             registerReceiver(mBTStatusReceiver, BluetoothStatusReceiver.getIntentFilter());
-
-            mBTDStateReceiver = new BluetoothDiscoverStateReceiver();
-            mBTDStateReceiver.setListener(this);
-            registerReceiver(mBTDStateReceiver, BluetoothDiscoverStateReceiver.getIntentFilter());
 
             mBTDReceiver = new BluetoothDiscoverReceiver();
             mBTDReceiver.setListener(this);
@@ -267,8 +241,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         if(mBTStatusReceiver != null) {
             unregisterReceiver(mBTStatusReceiver);
             mBTStatusReceiver = null;
-            unregisterReceiver(mBTDStateReceiver);
-            mBTDStateReceiver = null;
             unregisterReceiver(mBTDReceiver);
             mBTDReceiver = null;
         }
@@ -283,16 +255,6 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         //on onServiceDisconnected may not be called since we are disconnecting gracefully.
         mConnected = false;
         mBinder = null;
-    }
-
-    public void makeDiscoverable(View view){
-        Log.v("PAIR_ACTIVITY", "makeDiscoverable");
-        if(mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-            Intent discoverableIntent = new
-                    Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
-            startActivity(discoverableIntent);
-        }
     }
 
     public void findDevices(View view) {
@@ -337,43 +299,25 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void bluetoothOff() {
         Toast.makeText(this, "Bluetooth is off", Toast.LENGTH_SHORT).show();
-        mBluetoothSwitch.setChecked(false);
-        mBluetoothSwitch.setEnabled(true);
         enableBluetoothFields(false);
     }
 
     @Override
     public void bluetoothOn() {
         Toast.makeText(this, "Bluetooth is on", Toast.LENGTH_SHORT).show();
-        mBluetoothSwitch.setChecked(true);
-        mBluetoothSwitch.setEnabled(true);
         enableBluetoothFields(true);
     }
 
     @Override
     public void bluetoothTurningOff() {
         //Toast.makeText(this, "Bluetooth is turning off", Toast.LENGTH_SHORT).show();
-        mBluetoothSwitch.setChecked(false);
-        mBluetoothSwitch.setEnabled(true);
         enableBluetoothFields(false);
     }
 
     @Override
     public void bluetoothTurningOn() {
         Toast.makeText(this, "Bluetooth is turning on", Toast.LENGTH_SHORT).show();
-        mBluetoothSwitch.setChecked(true);
-        mBluetoothSwitch.setEnabled(false);
         enableBluetoothFields(false);
-    }
-
-    @Override
-    public void discoverable() {
-        mDiscoverableWheel.spin();
-    }
-
-    @Override
-    public void undiscoverable() {
-        mDiscoverableWheel.stopSpinning();
     }
 
     @Override
