@@ -11,9 +11,11 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,6 +50,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     private ProgressWheel mFindDevicesWheel;
     private RecyclerView mRecyclerView;
     private PairingRecyclerAdapter mAdapter;
+    private FloatingActionButton mFab;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothStatusReceiver mBTStatusReceiver = null;
@@ -56,7 +59,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     private ClientConnectTask mClientTask;
     private MyBluetoothHandler mHandler;
     private BluetoothService.BluetoothBinder mBinder;
-    private boolean mConnected;
+    private boolean mServiceConnected;
 
     private static class MyBluetoothHandler extends BluetoothServiceHandler{
 
@@ -100,7 +103,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.v(TAG, "bluetoothConnection connected" );
-            mConnected = true;
+            mServiceConnected = true;
             mBinder = (BluetoothService.BluetoothBinder ) service;
             mBinder.setHandler(mHandler);
         }
@@ -108,7 +111,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         @Override
         public void onServiceDisconnected(ComponentName name) {
             Log.v(TAG, "bluetoothConnection disconnected" );
-            mConnected = false;
+            mServiceConnected = false;
             mBinder = null;
         }
     };
@@ -131,15 +134,21 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     /**
      * Used to switch between an recycler view and the connection view.
      *
-     * @param enabled true if connection view should be visible, false otherwise
+     * @param showConnection true if connection view should be visible, false if recycler view should
+     *                       be visible.
      */
-    private void transitionConnectionVisibility(boolean enabled){
-        if(enabled){
+    private void transitionConnectionVisibility(boolean showConnection){
+        if(showConnection){
             mConnectionViewGroup.setVisibility(View.VISIBLE);
             mRecyclerView.setVisibility(View.INVISIBLE);
+            mFab.hide();
         }else{
             mConnectionViewGroup.setVisibility(View.INVISIBLE);
             mRecyclerView.setVisibility(View.VISIBLE);
+            if(mBluetoothAdapter.isDiscovering())
+                mFab.hide();
+            else
+                mFab.show();
         }
     }
 
@@ -147,6 +156,8 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pairing);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
@@ -162,6 +173,20 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         t = (TextView)findViewById(R.id.client_bluetooth_address);
         if (t != null)
             t.setText( mBluetoothAdapter.getAddress() );
+
+        mFab = (FloatingActionButton)findViewById(R.id.fab);
+        mFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mFab.hide();
+                if(mBluetoothAdapter.isDiscovering())
+                    return;
+                mAdapter.clearData();
+                mAdapter.addItems(getPairs());
+                mBluetoothAdapter.startDiscovery();
+
+            }
+        });
 
         mStatusText = (TextView)findViewById(R.id.status_message);
         mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
@@ -223,21 +248,12 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mConnected)
+        if(mServiceConnected)
             unbindService(mBluetoothConnection);
 
         //on onServiceDisconnected may not be called since we are disconnecting gracefully.
-        mConnected = false;
+        mServiceConnected = false;
         mBinder = null;
-    }
-
-    public void findDevices(View view) {
-        Log.v("PAIR_ACTIVITY", "findDevices");
-        if(mBluetoothAdapter.isDiscovering())
-            return;
-        mAdapter.clearData();
-        mAdapter.addItems(getPairs());
-        mBluetoothAdapter.startDiscovery();
     }
 
     public void cancelConnection(View v){
@@ -286,27 +302,30 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
             mStatusText.setText(R.string.status_found);
         else
             mStatusText.setText(R.string.status_not_found);
+        if(mRecyclerView.getVisibility() == View.VISIBLE)
+            mFab.show();
     }
 
     @Override
     public void itemClick(View clickedView, BluetoothDevice device) {
         Toast.makeText(this, "Attempting to connect with " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
-        if(mBluetoothAdapter.isDiscovering())
-            mBluetoothAdapter.cancelDiscovery();
         mStatusText.setText(R.string.status_connecting);
-        mClientTask = new ClientConnectTask(device, ServiceUtility.getBTChatUUID());
-        mClientTask.setListener(this);
-        mClientTask.execute();
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_bluetooth_name)).setText(device.getName());
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_mac_address)).setText(device.getAddress());
         mCancelConnectionButton.setEnabled(false);
         transitionConnectionVisibility(true);
+
+        if(mBluetoothAdapter.isDiscovering())
+            mBluetoothAdapter.cancelDiscovery();
+        mClientTask = new ClientConnectTask(device, ServiceUtility.getBTChatUUID());
+        mClientTask.setListener(this);
+        mClientTask.execute();
     }
 
     @Override
     public void serverSearchFinished(boolean found, BluetoothSocket socket) {
         if(found){
-            if(mConnected) {
+            if(mServiceConnected) {
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
                 mStatusText.setText(R.string.status_connected);
                 mBinder.addSocket(socket);
