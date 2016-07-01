@@ -47,7 +47,8 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     private ViewGroup mConnectionViewGroup;
     private TextView mStatusText;
     private Button mCancelConnectionButton;
-    private ProgressWheel mFindDevicesWheel;
+    private ProgressWheel mMessageWheel;
+    private ProgressWheel mConnectionWheel;
     private RecyclerView mRecyclerView;
     private PairingRecyclerAdapter mAdapter;
     private FloatingActionButton mFab;
@@ -190,7 +191,8 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
         mStatusText = (TextView)findViewById(R.id.status_message);
         mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
-        mFindDevicesWheel = (ProgressWheel)findViewById(R.id.message_progress);
+        mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
+        mConnectionWheel = (ProgressWheel)findViewById(R.id.connected_progress);
         mConnectionViewGroup = (ViewGroup) findViewById(R.id.pairing_connection);
 
         mRecyclerView = (RecyclerView) findViewById(R.id.found_devices_recycler_view);
@@ -202,7 +204,8 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //set default state
-        mFindDevicesWheel.stopSpinning();
+        mMessageWheel.stopSpinning();
+        mConnectionWheel.stopSpinning();
         mHandler = new MyBluetoothHandler(this);
 
         Intent intent = new Intent(this, BluetoothService.class);
@@ -215,9 +218,9 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
         //set the spinner progress bar to the correct state if the activity is coming from foreground
         if(mBluetoothAdapter.isDiscovering())
-            mFindDevicesWheel.spin();
+            mMessageWheel.spin();
         else
-            mFindDevicesWheel.stopSpinning();
+            mMessageWheel.stopSpinning();
 
         if(mBTStatusReceiver == null) {
             mBTStatusReceiver = new BluetoothStatusReceiver();
@@ -291,13 +294,13 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
     @Override
     public void discoveryStarted() {
-        mFindDevicesWheel.spin();
+        mMessageWheel.spin();
         mStatusText.setText(R.string.status_finding);
     }
 
     @Override
     public void discoveryFinished() {
-        mFindDevicesWheel.stopSpinning();
+        mMessageWheel.stopSpinning();
         if(mAdapter.getItemCount() > 0)
             mStatusText.setText(R.string.status_found);
         else
@@ -313,6 +316,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_bluetooth_name)).setText(device.getName());
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_mac_address)).setText(device.getAddress());
         mCancelConnectionButton.setEnabled(false);
+        mConnectionWheel.spin();
         transitionConnectionVisibility(true);
 
         if(mBluetoothAdapter.isDiscovering())
@@ -324,6 +328,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
     @Override
     public void serverSearchFinished(boolean found, BluetoothSocket socket) {
+        mConnectionWheel.stopSpinning();
         if(found){
             if(mServiceConnected) {
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
