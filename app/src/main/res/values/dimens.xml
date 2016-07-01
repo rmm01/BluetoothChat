@@ -3,4 +3,6 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
+    <!-- fab margin + max fab size. ensures recycler item is not hidden under fab -->
+    <dimen name="recycler_margin_bottom">72dp</dimen>
 </resources>

@@ -190,7 +190,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
         mStatusText = (TextView)findViewById(R.id.status_message);
         mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
-        mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
+        mFindDevicesWheel = (ProgressWheel)findViewById(R.id.message_progress);
         mConnectionViewGroup = (ViewGroup) findViewById(R.id.pairing_connection);
 
         mRecyclerView = (RecyclerView) findViewById(R.id.found_devices_recycler_view);

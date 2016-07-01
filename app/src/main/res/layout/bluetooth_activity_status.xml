@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="16dp"
+    android:paddingRight="16dp"
+    android:paddingEnd="16dp"
+    android:paddingLeft="16dp"
+    android:paddingStart="16dp"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+    <com.pnikosis.materialishprogress.ProgressWheel
+        android:id="@+id/message_progress"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        app:matProg_barColor="#0000aa"
+        app:matProg_progressIndeterminate="true"/>
+
+    <TextView
+        android:id="@+id/client_bluetooth_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="@android:color/primary_text_light"
+        tools:text="Bluetooth name"/>
+
+    <TextView
+        android:id="@+id/client_bluetooth_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/client_bluetooth_name"
+        android:paddingBottom="8dp"
+        android:textSize="14sp"
+        android:textColor="@android:color/secondary_text_light"
+        tools:text="Mac Address"/>
+
+    <TextView
+        android:id="@+id/status_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/client_bluetooth_address"
+        android:textColor="@android:color/primary_text_light"
+        android:lines="2"
+        tools:text="message"/>
+
+    <TextView
+        android:id="@+id/status_action1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@id/status_message"
+        android:textColor="@android:color/primary_text_light"
+        android:lines="2"
+        tools:text="action 1"/>
+
+    <TextView
+        android:id="@+id/status_action2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/status_action1"
+        android:textColor="@android:color/primary_text_light"
+        android:lines="2"
+        tools:text="action 2"/>
+
+</RelativeLayout>
