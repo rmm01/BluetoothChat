@@ -14,11 +14,10 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SwitchCompat;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,46 +25,38 @@ import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.ChatroomUtility;
 import com.yckir.bluetoothchat.ClientConnectTask;
 import com.yckir.bluetoothchat.R;
+import com.yckir.bluetoothchat.recyle_adapters.PairingRecyclerAdapter;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
-import com.yckir.bluetoothchat.recyle_adapters.BluetoothPairingAdapter;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Set;
 
-public class PairingActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,
-        BluetoothStatusReceiver.BlueToothStatusListener, BluetoothDiscoverReceiver.BlueToothDiscoverListener,
-        BluetoothPairingAdapter.BTF_ClickListener, ClientConnectTask.ClientEventListener {
+public class PairingActivity extends AppCompatActivity implements BluetoothStatusReceiver.BlueToothStatusListener,
+        BluetoothDiscoverReceiver.BlueToothDiscoverListener, ClientConnectTask.ClientEventListener,
+        PairingRecyclerAdapter.PairingItemClickListener {
 
     private static final String TAG = "PairingActivity";
 
-    private TextView mBlueToothName;
-    private TextView mBlueToothAddress;
-    private TextView mFindDevices;
+    private ViewGroup mConnectionViewGroup;
     private TextView mStatusText;
     private Button mCancelConnectionButton;
     private ProgressWheel mFindDevicesWheel;
-    private BluetoothAdapter mBluetoothAdapter;
+    private RecyclerView mRecyclerView;
+    private PairingRecyclerAdapter mAdapter;
 
+    private BluetoothAdapter mBluetoothAdapter;
     private BluetoothStatusReceiver mBTStatusReceiver = null;
     private BluetoothDiscoverReceiver mBTDReceiver = null;
 
-    private RecyclerView mPairedRecyclerView;
-    private BluetoothPairingAdapter mPairedAdapter;
-    private RecyclerView mFoundRecyclerView;
-    private BluetoothPairingAdapter mFoundAdapter;
-
     private ClientConnectTask mClientTask;
-
-    private BluetoothService.BluetoothBinder mBinder;
-
-    private boolean mConnected;
-
     private MyBluetoothHandler mHandler;
+    private BluetoothService.BluetoothBinder mBinder;
+    private boolean mConnected;
 
     private static class MyBluetoothHandler extends BluetoothServiceHandler{
 
@@ -86,7 +77,7 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             Toast.makeText(mActivity.get(), ServiceUtility.getCloseCodeInfo(closeCode) +
                     ": disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
             mActivity.get().mStatusText.setText(R.string.status_not_finding);
-            mActivity.get().enableBluetoothFields(true);
+            mActivity.get().transitionConnectionVisibility(false);
         }
 
         @Override
@@ -122,6 +113,9 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         }
     };
 
+    /**
+     * @return gets a list of paired bluetooth devices
+     */
     private ArrayList<BluetoothDevice> getPairs(){
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
         ArrayList<BluetoothDevice> devices = new ArrayList<>(pairedDevices.size());
@@ -135,29 +129,17 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     }
 
     /**
-     * Enables and disables the state of the fields depending on the parameter.
-     * This function checks if the state of any of the fields matches the parameter.
-     * This allows this function to return quickly when the state and parameter are the same.
+     * Used to switch between an recycler view and the connection view.
      *
-     * @param enabled true if fields should be enabled, false if they should be disabled.
+     * @param enabled true if connection view should be visible, false otherwise
      */
-    private void enableBluetoothFields(boolean enabled){
-
-        //if one of the fields is enabled and the parameter is the same, do nothing since state is already correct
-        if(enabled == mFindDevices.isEnabled())
-            return;
-
-        mFindDevices.setEnabled(enabled);
-
-        if(enabled) {
-            mPairedAdapter.updateItems(getPairs());
-            mPairedRecyclerView.setVisibility(View.VISIBLE);
-            mFoundRecyclerView.setVisibility(View.VISIBLE);
-        }else {
-            mPairedRecyclerView.setVisibility(View.INVISIBLE);
-            mFoundRecyclerView.setVisibility(View.INVISIBLE);
-            mFoundAdapter.clearData();
-            mFindDevicesWheel.stopSpinning();
+    private void transitionConnectionVisibility(boolean enabled){
+        if(enabled){
+            mConnectionViewGroup.setVisibility(View.VISIBLE);
+            mRecyclerView.setVisibility(View.INVISIBLE);
+        }else{
+            mConnectionViewGroup.setVisibility(View.INVISIBLE);
+            mRecyclerView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -173,37 +155,29 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
             return;
         }
 
-        mBlueToothName = (TextView)findViewById(R.id.client_bluetooth_name);
-        mBlueToothAddress = (TextView)findViewById(R.id.client_bluetooth_address);
-        mFindDevices = (TextView)findViewById(R.id.find_devices_prompt);
+        TextView t = ((TextView)findViewById(R.id.client_bluetooth_name));
+        if (t != null)
+            t.setText( mBluetoothAdapter.getName() );
+
+        t = (TextView)findViewById(R.id.client_bluetooth_address);
+        if (t != null)
+            t.setText( mBluetoothAdapter.getAddress() );
+
         mStatusText = (TextView)findViewById(R.id.status_message);
         mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
         mFindDevicesWheel = (ProgressWheel)findViewById(R.id.find_devices);
+        mConnectionViewGroup = (ViewGroup) findViewById(R.id.pairing_connection);
 
-        mPairedRecyclerView = (RecyclerView) findViewById(R.id.paired_devices_recycler_view);
-
-        if(mPairedRecyclerView != null)
-            mPairedRecyclerView.setHasFixedSize(true);
-        mPairedAdapter = new BluetoothPairingAdapter();
-        mPairedAdapter.updateItems(getPairs());
-        mPairedAdapter.setRecyclerItemListener(this);
-        mPairedRecyclerView.setAdapter(mPairedAdapter);
-        mPairedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-        mFoundRecyclerView = (RecyclerView)findViewById(R.id.found_devices_recycler_view);
-        if(mFoundRecyclerView != null)
-            mFoundRecyclerView.setHasFixedSize(true);
-        mFoundAdapter = new BluetoothPairingAdapter();
-        mFoundAdapter.setRecyclerItemListener(this);
-        mFoundRecyclerView.setAdapter(mFoundAdapter);
-        mFoundRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mRecyclerView = (RecyclerView) findViewById(R.id.found_devices_recycler_view);
+        if(mRecyclerView != null)
+            mRecyclerView.setHasFixedSize(true);
+        mAdapter = new PairingRecyclerAdapter();
+        mAdapter.setPairingItemClickListener(this);
+        mRecyclerView.setAdapter(mAdapter);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         //set default state
-        mBlueToothName.setText( mBluetoothAdapter.getName() );
-        mBlueToothAddress.setText( mBluetoothAdapter.getAddress() );
         mFindDevicesWheel.stopSpinning();
-        enableBluetoothFields(mBluetoothAdapter.isEnabled());
-
         mHandler = new MyBluetoothHandler(this);
 
         Intent intent = new Intent(this, BluetoothService.class);
@@ -261,70 +235,42 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         Log.v("PAIR_ACTIVITY", "findDevices");
         if(mBluetoothAdapter.isDiscovering())
             return;
-        mFoundAdapter.clearData();
-        mPairedAdapter.updateItems(getPairs());
+        mAdapter.clearData();
+        mAdapter.addItems(getPairs());
         mBluetoothAdapter.startDiscovery();
     }
 
     public void cancelConnection(View v){
         mStatusText.setText(R.string.status_connect_canceled);
-        mCancelConnectionButton.setVisibility(View.INVISIBLE);
-        enableBluetoothFields(true);
+        transitionConnectionVisibility(false);
         mBinder.removeSockets(ServiceUtility.CLOSE_SAY_GOODBYE);
-    }
-
-    @Override
-    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        Log.v("PAIR_ACTIVITY", "bluetoothSwitch");
-
-        if(isChecked){
-            if(mBluetoothAdapter.isEnabled()){
-                //bluetooth is already on, make sure fields are enabled
-                enableBluetoothFields(true);
-            }else{
-                mBluetoothAdapter.enable();
-                //don't enable fields since bluetooth takes time to turn on
-            }
-        }else{
-            if(mBluetoothAdapter.isEnabled()){
-                mBluetoothAdapter.disable();
-                enableBluetoothFields(false);
-            }else{
-                //bluetooth is already disabled, make sure fields are off
-                enableBluetoothFields(false);
-            }
-        }
     }
 
     @Override
     public void bluetoothOff() {
         Toast.makeText(this, "Bluetooth is off", Toast.LENGTH_SHORT).show();
-        enableBluetoothFields(false);
+        finish();
     }
 
     @Override
     public void bluetoothOn() {
         Toast.makeText(this, "Bluetooth is on", Toast.LENGTH_SHORT).show();
-        enableBluetoothFields(true);
     }
 
     @Override
     public void bluetoothTurningOff() {
-        //Toast.makeText(this, "Bluetooth is turning off", Toast.LENGTH_SHORT).show();
-        enableBluetoothFields(false);
+        finish();
     }
 
     @Override
     public void bluetoothTurningOn() {
-        Toast.makeText(this, "Bluetooth is turning on", Toast.LENGTH_SHORT).show();
-        enableBluetoothFields(false);
+        finish();
     }
 
     @Override
     public void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice) {
        Toast.makeText(this, bluetoothDevice.getName() + ", " + bluetoothDevice.getAddress(), Toast.LENGTH_SHORT).show();
-        if(!mPairedAdapter.contains(bluetoothDevice.getAddress()))
-            mFoundAdapter.addItem(bluetoothDevice);
+        mAdapter.addItem(bluetoothDevice);
     }
 
     @Override
@@ -336,14 +282,14 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
     @Override
     public void discoveryFinished() {
         mFindDevicesWheel.stopSpinning();
-        if(mPairedAdapter.getItemCount() + mFoundAdapter.getItemCount() > 0)
+        if(mAdapter.getItemCount() > 0)
             mStatusText.setText(R.string.status_found);
         else
             mStatusText.setText(R.string.status_not_found);
     }
 
     @Override
-    public void BTF_ItemClick(BluetoothDevice device) {
+    public void itemClick(View clickedView, BluetoothDevice device) {
         Toast.makeText(this, "Attempting to connect with " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
         if(mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
@@ -351,6 +297,10 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
         mClientTask = new ClientConnectTask(device, ServiceUtility.getBTChatUUID());
         mClientTask.setListener(this);
         mClientTask.execute();
+        ((TextView)mConnectionViewGroup.findViewById(R.id.connected_bluetooth_name)).setText(device.getName());
+        ((TextView)mConnectionViewGroup.findViewById(R.id.connected_mac_address)).setText(device.getAddress());
+        mCancelConnectionButton.setEnabled(false);
+        transitionConnectionVisibility(true);
     }
 
     @Override
@@ -360,14 +310,13 @@ public class PairingActivity extends AppCompatActivity implements CompoundButton
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
                 mStatusText.setText(R.string.status_connected);
                 mBinder.addSocket(socket);
-                mCancelConnectionButton.setVisibility(View.VISIBLE);
-                enableBluetoothFields(false);
+                mCancelConnectionButton.setEnabled(true);
                 return;
             }
             Log.e(TAG, "not connected to read or write service when a server is found");
         }
         Toast.makeText(PairingActivity.this, "Could not connect to server, try again", Toast.LENGTH_SHORT).show();
         mStatusText.setText(R.string.status_connect_failed);
-
+        transitionConnectionVisibility(false);
     }
 }

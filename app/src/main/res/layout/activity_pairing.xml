@@ -63,7 +63,7 @@
             wheel:matProg_progressIndeterminate="true"/>
 
         <TextView
-            android:id="@+id/paired_devices_label"
+            android:id="@+id/found_devices_label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingBottom="10dp"
@@ -75,52 +75,22 @@
             android:layout_marginTop="20dp"
             android:layout_below="@id/find_devices_prompt"
             android:background="#aaaaaaaa"
-            android:text="@string/paired_devices_label"/>
-
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/paired_devices_recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginLeft="20dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginRight="20dp"
-            android:layout_marginEnd="20dp"
-            android:layout_marginTop="20dp"
-            android:layout_below="@id/paired_devices_label"/>
-
-        <TextView
-            android:id="@+id/found_devices_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingBottom="10dp"
-            android:paddingTop="10dp"
-            android:paddingLeft="20dp"
-            android:paddingStart="20dp"
-            android:paddingRight="20dp"
-            android:paddingEnd="20dp"
-            android:layout_marginTop="20dp"
-            android:layout_below="@id/paired_devices_recycler_view"
-            android:background="#aaaaaaaa"
             android:text="@string/found_devices_label"/>
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/found_devices_recycler_view"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
+            android:layout_height="wrap_content"
             android:layout_marginLeft="20dp"
             android:layout_marginStart="20dp"
             android:layout_marginTop="20dp"
             android:layout_below="@id/found_devices_label"/>
 
-        <Button
-            android:id="@+id/cancel_button"
-            android:layout_width="wrap_content"
+        <include
+            layout="@layout/pairing_connection"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:layout_below="@id/found_devices_recycler_view"
-            android:layout_centerHorizontal="true"
-            android:visibility="invisible"
-            android:onClick="cancelConnection"
-            android:text="@string/cancel_connection"/>
+            android:layout_below="@id/found_devices_label"
+            tools:visibility="invisible"/>
     </RelativeLayout>
 </ScrollView>
