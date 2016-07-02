@@ -27,10 +27,19 @@
     <string name="status_accepted_clients">Chatroom can be started</string>
 
     <!-- PairingActivity -->
-    <string name="enable_discover_label">Tap to make this device discoverable</string>
-    <string name="find_devices_prompt">Tap to find local devices</string>
-    <string name="paired_devices_label">Paired devices</string>
-    <string name="found_devices_label">Found devices</string>
+    <string name="pairing_label_found_devices">Found devices</string>
+
+    <string name="pairing_action_click_fab">Click bottom right button to search for bluetooth devices.</string>
+    <string name="pairing_action_click_btd">Select a Bluetooth device to connect to.</string>
+    <string name="pairing_action_waiting">Waiting for host to start.</string>
+
+    <string name="pairing_message_searching">Searching for bluetooth devices.</string>
+    <string name="pairing_message_search_finished">Finished searching for bluetooth devices.</string>
+    <string name="pairing_message_search_failed">No bluetooth devices found.</string>
+    <string name="pairing_message_connecting">Connecting to the bluetooth host.</string>
+    <string name="pairing_message_connected">Connected to the bluetooth host.</string>
+    <string name="pairing_message_connect_failed">Could not connected to the bluetooth host.</string>
+    <string name="pairing_message_connection_closed">Connection has been closed.</string>
 
     <!-- PairingActivity status -->
     <string name="status_not_finding">Not currently looking for a Server</string>

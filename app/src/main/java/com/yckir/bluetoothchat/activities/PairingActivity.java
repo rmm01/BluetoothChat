@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.annotation.IntDef;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -34,6 +35,8 @@ import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Set;
@@ -44,8 +47,53 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
     private static final String TAG = "PairingActivity";
 
+    @IntDef({DEFAULT, FINDING_EMPTY, FINDING_NOT_EMPTY, FOUND_DEVICES, CONNECTING, CONNECTED})
+    @Retention(RetentionPolicy.SOURCE)
+    /**
+     * The states that the activity can be in. The state can be an indication to what is
+     * happening in the activity.
+     */
+    public @interface PAIRING_STATE {}
+
+    /**
+     * The starting state of the activity. The user can click the fab to transition into the
+     * FINDING_EMPTY state.
+     */
+    public static final int DEFAULT             = 0;
+    /**
+     * The activity is searching for bluetooth devices. No bluetooth devices have been found so far.
+     * If none are found, goes back to DEFAULT state. If at least one is found, the activity goes
+     * into the FINDING_EMPTY state.
+     */
+    public static final int FINDING_EMPTY       = 1;
+    /**
+     * The activity is searching for bluetooth devices. At least one bluetooth device has been
+     * found so far. The user can click on a device to start a connection and go to connecting state.
+     */
+    public static final int FINDING_NOT_EMPTY   = 2;
+    /**
+     * The activity has finished searching for bluetooth devices. At least one bluetooth device
+     * has been found. The user can click the fab to transition to FINDING_NOT_EMPTY or
+     * FINDING_EMPTY state. The user can click on a device to start a connection and go to
+     * connecting state.
+     */
+    public static final int FOUND_DEVICES       = 3;
+    /**
+     * The user is connecting to a bluetooth device. If connection fails, the activity goes to
+     * FoundDevices state. If connection is successful, then goes into connected state.
+     */
+    public static final int CONNECTING          = 4;
+    /**
+     * the connection has been made to a remote bluetooth device. The user is waiting for host to
+     * finish setting up. host will tell client that it can move on to content activity. If the
+     * connection is closed for any reason, goes to FOUND_DEVICES state.
+     */
+    public static final int CONNECTED           = 5;
+
     private ViewGroup mConnectionViewGroup;
-    private TextView mStatusText;
+    private TextView mMessageText;
+    private TextView mActionText1;
+    private TextView mActionText2;
     private Button mCancelConnectionButton;
     private ProgressWheel mMessageWheel;
     private ProgressWheel mConnectionWheel;
@@ -61,6 +109,84 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     private MyBluetoothHandler mHandler;
     private BluetoothService.BluetoothBinder mBinder;
     private boolean mServiceConnected;
+    public @PAIRING_STATE int mState = DEFAULT;
+
+    /**
+     * reset the state to the initial state.
+     */
+    public void resetState(){
+        mState = DEFAULT;
+        mMessageText.setText("");
+        mActionText1.setText(R.string.pairing_action_click_fab);
+        mActionText2.setText("");
+    }
+
+    /**
+     * Changes the current state of the activity, illegal exception thrown if the current state
+     * cannot transition to new state.See PAIRING_STATE variables for more details
+     *
+     * @param state the state to change to
+     */
+    public void changeState(@PAIRING_STATE int state) {
+        if (mState == state){
+            Log.v(TAG, "going to same state " + state);
+            return;
+        }
+        switch (state) {
+            case DEFAULT:
+                if(mState != FINDING_EMPTY)
+                    throw new IllegalArgumentException("cannot go from state" + mState + " to state " + state);
+                mMessageText.setText(R.string.pairing_message_search_failed);
+                mActionText1.setText(R.string.pairing_action_click_fab);
+                mActionText2.setText("");
+                break;
+            case FINDING_EMPTY:
+                if(mState != DEFAULT && mState != FOUND_DEVICES)
+                    throw new IllegalArgumentException("cannot go from state" + mState + " to state " + state);
+                mMessageText.setText(R.string.pairing_message_searching);
+                mActionText1.setText("");
+                mActionText2.setText("");
+                break;
+            case FINDING_NOT_EMPTY:
+                if(mState != FINDING_EMPTY && mState != DEFAULT && mState != FOUND_DEVICES)
+                    throw new IllegalArgumentException("cannot go from state" + mState + " to state " + state);
+                mMessageText.setText(R.string.pairing_message_searching);
+                mActionText1.setText(R.string.pairing_action_click_btd);
+                mActionText2.setText("");
+                break;
+            case FOUND_DEVICES:
+                if(mState != CONNECTING && mState != CONNECTED && mState!= FINDING_NOT_EMPTY)
+                    throw new IllegalArgumentException("cannot go from state" + mState + " to state " + state);
+                if(mState == FINDING_NOT_EMPTY)
+                    mMessageText.setText(R.string.pairing_message_search_finished);
+                else if(mState == CONNECTING)
+                    mMessageText.setText(R.string.pairing_message_connect_failed);
+                else
+                    mMessageText.setText(R.string.pairing_message_connection_closed);
+                mActionText1.setText(R.string.pairing_action_click_btd);
+                mActionText2.setText(R.string.pairing_action_click_fab);
+                break;
+            case CONNECTING:
+                if(mState != FOUND_DEVICES && mState != FINDING_NOT_EMPTY)
+                    throw new IllegalArgumentException("cannot go from state" + mState + " to state " + state);
+                mMessageText.setText(R.string.pairing_message_connecting);
+                mActionText1.setText("");
+                mActionText2.setText("");
+                break;
+            case CONNECTED:
+                if(mState != CONNECTING)
+                    throw new IllegalArgumentException("cannot go from state" + mState + " to state " + state);
+                mMessageText.setText(R.string.pairing_message_connected);
+                mActionText1.setText(R.string.pairing_action_waiting);
+                mActionText2.setText("");
+                break;
+            default:
+                throw new IllegalArgumentException("invalid state " + state + " sent to changeState");
+        }
+
+        Log.v(TAG, "going from state " + mState + " to state " + state);
+        mState = state;
+    }
 
     private static class MyBluetoothHandler extends BluetoothServiceHandler{
 
@@ -80,7 +206,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         public void connectionClosed(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode) {
             Toast.makeText(mActivity.get(), ServiceUtility.getCloseCodeInfo(closeCode) +
                     ": disconnected from " + macAddress, Toast.LENGTH_SHORT).show();
-            mActivity.get().mStatusText.setText(R.string.status_not_finding);
+            mActivity.get().changeState(FOUND_DEVICES);
             mActivity.get().transitionConnectionVisibility(false);
         }
 
@@ -183,13 +309,15 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
                 if(mBluetoothAdapter.isDiscovering())
                     return;
                 mAdapter.clearData();
-                mAdapter.addItems(getPairs());
                 mBluetoothAdapter.startDiscovery();
 
             }
         });
 
-        mStatusText = (TextView)findViewById(R.id.status_message);
+        mMessageText = (TextView)findViewById(R.id.status_message);
+        mActionText1 = (TextView)findViewById(R.id.status_action1);
+        mActionText2 = (TextView)findViewById(R.id.status_action2);
+
         mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
         mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
         mConnectionWheel = (ProgressWheel)findViewById(R.id.connected_progress);
@@ -207,6 +335,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         mMessageWheel.stopSpinning();
         mConnectionWheel.stopSpinning();
         mHandler = new MyBluetoothHandler(this);
+        resetState();
 
         Intent intent = new Intent(this, BluetoothService.class);
         bindService(intent ,mBluetoothConnection ,BIND_AUTO_CREATE);
@@ -260,8 +389,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     }
 
     public void cancelConnection(View v){
-        mStatusText.setText(R.string.status_connect_canceled);
-        transitionConnectionVisibility(false);
+        //transition connection and changing state will be done in handler
         mBinder.removeSockets(ServiceUtility.CLOSE_SAY_GOODBYE);
     }
 
@@ -288,31 +416,36 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
     @Override
     public void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice) {
-       Toast.makeText(this, bluetoothDevice.getName() + ", " + bluetoothDevice.getAddress(), Toast.LENGTH_SHORT).show();
         mAdapter.addItem(bluetoothDevice);
+        changeState(FINDING_NOT_EMPTY);
     }
 
     @Override
     public void discoveryStarted() {
         mMessageWheel.spin();
-        mStatusText.setText(R.string.status_finding);
+        mAdapter.addItems(getPairs());
+        if(mAdapter.getItemCount() > 0)
+            changeState(FINDING_NOT_EMPTY);
+        else
+            changeState(FINDING_EMPTY);
     }
 
     @Override
     public void discoveryFinished() {
         mMessageWheel.stopSpinning();
+        //not sure of possibility if connecting is much faster that closing discovery
+        if(mState == CONNECTING || mState == CONNECTED)
+            return;
         if(mAdapter.getItemCount() > 0)
-            mStatusText.setText(R.string.status_found);
+            changeState(FOUND_DEVICES);
         else
-            mStatusText.setText(R.string.status_not_found);
-        if(mRecyclerView.getVisibility() == View.VISIBLE)
-            mFab.show();
+            changeState(DEFAULT);
+        mFab.show();
     }
 
     @Override
     public void itemClick(View clickedView, BluetoothDevice device) {
-        Toast.makeText(this, "Attempting to connect with " +device.getName() + ", " + device.getAddress(), Toast.LENGTH_SHORT).show();
-        mStatusText.setText(R.string.status_connecting);
+        changeState(CONNECTING);
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_bluetooth_name)).setText(device.getName());
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_mac_address)).setText(device.getAddress());
         mCancelConnectionButton.setEnabled(false);
@@ -332,7 +465,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         if(found){
             if(mServiceConnected) {
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
-                mStatusText.setText(R.string.status_connected);
+                changeState(CONNECTED);
                 mBinder.addSocket(socket);
                 mCancelConnectionButton.setEnabled(true);
                 return;
@@ -340,7 +473,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
             Log.e(TAG, "not connected to read or write service when a server is found");
         }
         Toast.makeText(PairingActivity.this, "Could not connect to server, try again", Toast.LENGTH_SHORT).show();
-        mStatusText.setText(R.string.status_connect_failed);
+        changeState(FOUND_DEVICES);
         transitionConnectionVisibility(false);
     }
 }

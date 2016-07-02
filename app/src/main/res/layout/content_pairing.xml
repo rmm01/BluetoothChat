@@ -24,7 +24,7 @@
         android:layout_marginTop="20dp"
         android:layout_below="@id/msg"
         android:background="#aaaaaaaa"
-        android:text="@string/found_devices_label"/>
+        android:text="@string/pairing_label_found_devices"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/found_devices_recycler_view"
