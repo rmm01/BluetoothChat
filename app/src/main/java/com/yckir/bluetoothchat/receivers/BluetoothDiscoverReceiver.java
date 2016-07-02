@@ -14,7 +14,7 @@ public class BluetoothDiscoverReceiver extends BroadcastReceiver{
     private BlueToothDiscoverListener mListener;
 
     public interface BlueToothDiscoverListener{
-        void deviceDiscovered(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice);
+        void discoveredDevice(BluetoothClass bluetoothClass, BluetoothDevice bluetoothDevice);
         void discoveryStarted();
         void discoveryFinished();
     }
@@ -42,7 +42,7 @@ public class BluetoothDiscoverReceiver extends BroadcastReceiver{
         if(BluetoothDevice.ACTION_FOUND.equals(action)){
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             BluetoothClass bluetoothClass = intent.getParcelableExtra(BluetoothDevice.EXTRA_CLASS);
-            mListener.deviceDiscovered(bluetoothClass, device);
+            mListener.discoveredDevice(bluetoothClass, device);
         }
 
         if(BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)){

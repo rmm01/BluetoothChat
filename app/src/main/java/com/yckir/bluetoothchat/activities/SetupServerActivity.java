@@ -233,7 +233,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
 
         if( !mBluetoothAdapter.isEnabled() ) {
-            bluetoothOff();
+            bluetoothStateChanged(BluetoothStatusReceiver.BLUETOOTH_OFF);
         }
 
         setContentView(R.layout.activity_setup);
@@ -294,7 +294,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         //make sure that bluetooth is enabled
         if( !mBluetoothAdapter.isEnabled() ) {
-            bluetoothOff();
+            bluetoothStateChanged(BluetoothStatusReceiver.BLUETOOTH_OFF);
         }
 
         //make sure that the server is started if currently discoverable
@@ -407,23 +407,20 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     @Override
-    public void bluetoothOff() {
-        Toast.makeText(this, "bluetooth off, server has shutdown", Toast.LENGTH_LONG).show();
-        stopServer();
-        finish();
+    public void bluetoothStateChanged(@BluetoothStatusReceiver.BLUETOOTH_STATE int state){
+        switch (state) {
+            case BluetoothStatusReceiver.BLUETOOTH_OFF:
+                Toast.makeText(this, "bluetooth off, server has shutdown", Toast.LENGTH_LONG).show();
+                stopServer();
+                finish();
+                break;
+            case BluetoothStatusReceiver.BLUETOOTH_ON:
+            case BluetoothStatusReceiver.BLUETOOTH_TURNING_ON:
+            case BluetoothStatusReceiver.BLUETOOTH_TURNING_OFF:
+                break;
+        }
     }
 
-    @Override
-    public void bluetoothOn() {
-    }
-
-    @Override
-    public void bluetoothTurningOff() {
-    }
-
-    @Override
-    public void bluetoothTurningOn() {
-    }
 
     @Override
     public void discoverable() {

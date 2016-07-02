@@ -6,16 +6,27 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.support.annotation.IntDef;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 public class BluetoothStatusReceiver extends BroadcastReceiver{
 
     private BlueToothStatusListener mListener;
 
+    @IntDef({BLUETOOTH_ON, BLUETOOTH_TURNING_ON, BLUETOOTH_OFF, BLUETOOTH_TURNING_OFF})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface BLUETOOTH_STATE {}
+
+    public static final int BLUETOOTH_ON            = 1;
+    public static final int BLUETOOTH_TURNING_ON    = 2;
+    public static final int BLUETOOTH_OFF           = 3;
+    public static final int BLUETOOTH_TURNING_OFF   = 4;
+
+
     public interface BlueToothStatusListener{
-        void bluetoothOff();
-        void bluetoothOn();
-        void bluetoothTurningOff();
-        void bluetoothTurningOn();
+        void bluetoothStateChanged(@BLUETOOTH_STATE int state);
     }
 
     public void setListener(BlueToothStatusListener listener){
@@ -39,16 +50,16 @@ public class BluetoothStatusReceiver extends BroadcastReceiver{
                     BluetoothAdapter.ERROR);
             switch (state) {
                 case BluetoothAdapter.STATE_OFF:
-                    mListener.bluetoothOff();
+                    mListener.bluetoothStateChanged(BLUETOOTH_OFF);
                     break;
                 case BluetoothAdapter.STATE_TURNING_OFF:
-                    mListener.bluetoothTurningOff();
+                    mListener.bluetoothStateChanged(BLUETOOTH_TURNING_OFF);
                     break;
                 case BluetoothAdapter.STATE_ON:
-                    mListener.bluetoothOn();
+                    mListener.bluetoothStateChanged(BLUETOOTH_ON);
                     break;
                 case BluetoothAdapter.STATE_TURNING_ON:
-                    mListener.bluetoothTurningOn();
+                    mListener.bluetoothStateChanged(BLUETOOTH_TURNING_ON);
                     break;
             }
         }
