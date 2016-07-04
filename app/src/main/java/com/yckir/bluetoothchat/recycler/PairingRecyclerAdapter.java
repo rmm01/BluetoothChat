@@ -35,16 +35,19 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
 
     @Override
     public void onBindViewHolder(MyViewHolder holder, int position) {
-        if(mDevices.isEmpty())
-            return;
-        holder.mNameTextView.setText(mDevices.get(position).getName());
-        holder.mAddressTextView.setText(mDevices.get(position).getAddress());
+        if(position == mDevices.size()){
+            holder.mConnectionImageView.setVisibility(View.INVISIBLE);
+        }else {
+            holder.mConnectionImageView.setVisibility(View.VISIBLE);
+            holder.mNameTextView.setText(mDevices.get(position).getName());
+            holder.mAddressTextView.setText(mDevices.get(position).getAddress());
+        }
     }
 
 
     @Override
     public int getItemCount() {
-        return mDevices.size();
+        return mDevices.size() + 1;
     }
 
     public void addItem(BluetoothDevice device){

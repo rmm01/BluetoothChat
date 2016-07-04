@@ -48,7 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="@dimen/recycler_margin_bottom"
+        android:layout_marginBottom="8dp"
         android:layout_below="@id/pairing_found_devices_label"
         android:scrollbars="vertical"/>
 
