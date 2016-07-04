@@ -39,7 +39,7 @@
             android:paddingRight="16dp"
             android:paddingEnd="16dp"
             android:gravity="bottom"
-            android:textColor="@android:color/primary_text_light"
+            android:textColor="@color/primaryText"
             android:textSize="16sp"
             tools:text="bluetooth name"/>
 
@@ -55,7 +55,7 @@
             android:paddingRight="16dp"
             android:paddingEnd="16dp"
             android:gravity="top"
-            android:textColor="@android:color/secondary_text_light"
+            android:textColor="@color/secondaryText"
             android:textSize="14sp"
             tools:text="mac address"/>
     </RelativeLayout>
@@ -68,6 +68,7 @@
         android:paddingTop="8dp"
         android:paddingRight="16dp"
         android:paddingEnd="16dp"
+        android:textColor="@color/primaryText"
         android:text="@string/cancel_connection"
         android:onClick="cancelConnection"
         style="?attr/borderlessButtonStyle"/>

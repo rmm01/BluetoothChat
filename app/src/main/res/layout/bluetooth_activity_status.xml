@@ -27,7 +27,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="16sp"
-        android:textColor="@android:color/primary_text_light"
+        android:textColor="@color/primaryText"
         tools:text="Bluetooth name"/>
 
     <TextView
@@ -37,7 +37,7 @@
         android:layout_below="@id/client_bluetooth_name"
         android:paddingBottom="8dp"
         android:textSize="14sp"
-        android:textColor="@android:color/secondary_text_light"
+        android:textColor="@color/secondaryText"
         tools:text="Mac Address"/>
 
     <TextView
@@ -46,7 +46,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_below="@id/client_bluetooth_address"
-        android:textColor="@android:color/primary_text_light"
+        android:textColor="@color/primaryText"
         android:lines="2"
         tools:text="message"/>
 
@@ -57,7 +57,7 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_below="@id/status_message"
-        android:textColor="@android:color/primary_text_light"
+        android:textColor="@color/primaryText"
         android:lines="2"
         tools:text="action 1"/>
 
@@ -66,7 +66,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/status_action1"
-        android:textColor="@android:color/primary_text_light"
+        android:textColor="@color/primaryText"
         android:lines="2"
         tools:text="action 2"/>
 

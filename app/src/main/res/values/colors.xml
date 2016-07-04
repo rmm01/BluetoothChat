@@ -4,4 +4,7 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#00BCD4</color>
     <color name="recyclerPressed">#cccccc</color>
+    <color name="secondaryText">#727272</color>
+    <color name="primaryText">#212121</color>
+    <color name="dividerColor">#B6B6B6</color>
 </resources>
