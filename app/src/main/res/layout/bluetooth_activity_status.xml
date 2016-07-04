@@ -19,7 +19,7 @@
         android:layout_height="30dp"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
-        app:matProg_barColor="#0000aa"
+        app:matProg_barColor="@color/colorAccent"
         app:matProg_progressIndeterminate="true"/>
 
     <TextView
