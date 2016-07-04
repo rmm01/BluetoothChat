@@ -27,7 +27,8 @@
     <string name="status_accepted_clients">Chatroom can be started</string>
 
     <!-- PairingActivity -->
-    <string name="pairing_label_found_devices">Found devices</string>
+    <string name="pairing_label_found_devices">Found bluetooth devices</string>
+    <string name="pairing_label_status">Status</string>
 
     <string name="pairing_action_click_fab">Click bottom right button to search for bluetooth devices.</string>
     <string name="pairing_action_click_btd">Select a Bluetooth device to connect to.</string>

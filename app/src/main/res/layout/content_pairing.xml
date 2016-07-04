@@ -7,38 +7,55 @@
     android:layout_height="wrap_content"
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
+    <TextView
+        android:id="@+id/status_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="5dp"
+        android:paddingTop="5dp"
+        android:paddingLeft="20dp"
+        android:paddingStart="20dp"
+        android:paddingRight="20dp"
+        android:paddingEnd="20dp"
+        android:layout_marginBottom="8dp"
+        android:background="#dddddd"
+        android:text="@string/pairing_label_status"/>
+
     <include
         android:id="@+id/msg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/status_label"
         layout="@layout/bluetooth_activity_status"/>
 
     <TextView
         android:id="@+id/found_devices_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="10dp"
-        android:paddingTop="10dp"
+        android:paddingBottom="5dp"
+        android:paddingTop="5dp"
         android:paddingLeft="20dp"
         android:paddingStart="20dp"
         android:paddingRight="20dp"
         android:paddingEnd="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         android:layout_below="@id/msg"
-        android:background="#aaaaaaaa"
+        android:background="#dddddd"
         android:text="@string/pairing_label_found_devices"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/found_devices_recycler_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="@dimen/recycler_margin_bottom"
         android:layout_below="@id/found_devices_label"
         android:scrollbars="vertical"/>
 
     <include
         layout="@layout/pairing_connection"
+        android:layout_marginTop="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/found_devices_label"
