@@ -1,4 +1,4 @@
-package com.yckir.bluetoothchat.recyle_adapters;
+package com.yckir.bluetoothchat.recycler;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;

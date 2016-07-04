@@ -32,7 +32,7 @@ import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
-import com.yckir.bluetoothchat.recyle_adapters.BluetoothServerAdapter;
+import com.yckir.bluetoothchat.recycler.BluetoothServerAdapter;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
 

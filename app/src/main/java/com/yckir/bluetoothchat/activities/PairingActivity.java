@@ -30,9 +30,9 @@ import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.ChatroomUtility;
 import com.yckir.bluetoothchat.ClientConnectTask;
 import com.yckir.bluetoothchat.R;
-import com.yckir.bluetoothchat.recyle_adapters.PairingRecyclerAdapter;
-import com.yckir.bluetoothchat.recyle_adapters.RecyclerDivider;
-import com.yckir.bluetoothchat.recyle_adapters.RecyclerDividerDecoration;
+import com.yckir.bluetoothchat.recycler.PairingRecyclerAdapter;
+import com.yckir.bluetoothchat.recycler.RecyclerDivider;
+import com.yckir.bluetoothchat.recycler.RecyclerDividerDecoration;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
@@ -323,9 +323,11 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         });
         Typeface typeface = Typeface.createFromAsset(getAssets(), "fonts/Roboto-Medium.ttf");
         t = (TextView)findViewById(R.id.pairing_status_label);
-        t.setTypeface(typeface);
+        if (t != null)
+            t.setTypeface(typeface);
         t = (TextView)findViewById(R.id.pairing_found_devices_label);
-        t.setTypeface(typeface);
+        if (t != null)
+            t.setTypeface(typeface);
         mMessageText = (TextView)findViewById(R.id.status_message);
         mActionText1 = (TextView)findViewById(R.id.status_action1);
         mActionText2 = (TextView)findViewById(R.id.status_action2);
@@ -338,10 +340,14 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         mRecyclerView = (RecyclerView) findViewById(R.id.found_devices_recycler_view);
         if(mRecyclerView != null)
             mRecyclerView.setHasFixedSize(true);
-        mAdapter = new PairingRecyclerAdapter();
+        mAdapter = new PairingRecyclerAdapter(this);
         mAdapter.setPairingItemClickListener(this);
         mRecyclerView.setAdapter(mAdapter);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        int px = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+        mRecyclerView.addItemDecoration(new RecyclerDivider(px));
+        mRecyclerView.addItemDecoration(new RecyclerDividerDecoration(this));
 
         //set default state
         mMessageWheel.stopSpinning();

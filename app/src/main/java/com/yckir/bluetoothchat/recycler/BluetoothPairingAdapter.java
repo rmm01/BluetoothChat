@@ -1,8 +1,7 @@
-package com.yckir.bluetoothchat.recyle_adapters;
+package com.yckir.bluetoothchat.recycler;
 
 
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,15 +12,13 @@ import com.yckir.bluetoothchat.R;
 
 import java.util.ArrayList;
 
-public class BluetoothServerAdapter extends RecyclerView.Adapter<BluetoothServerAdapter.MyViewHolder>{
+public class BluetoothPairingAdapter extends RecyclerView.Adapter<BluetoothPairingAdapter.MyViewHolder>{
 
     ArrayList<BluetoothDevice> mDevices;
-    ArrayList<BluetoothSocket> mSockets;
     private BTF_ClickListener mListener = null;
 
-    public BluetoothServerAdapter(){
+    public BluetoothPairingAdapter(){
         mDevices = new ArrayList<>(10);
-        mSockets = new ArrayList<>(10);
     }
 
     public void setRecyclerItemListener( BTF_ClickListener listener){
@@ -51,47 +48,21 @@ public class BluetoothServerAdapter extends RecyclerView.Adapter<BluetoothServer
 
     public void clearData(){
         mDevices.clear();
-        mSockets.clear();
         notifyDataSetChanged();
     }
 
-    public void addItem(BluetoothDevice device, BluetoothSocket socket){
+    public void addItem(BluetoothDevice device){
         if(device == null)
             throw new IllegalArgumentException("parameter cannot be null");
         mDevices.add(device);
-        mSockets.add(socket);
         notifyDataSetChanged();
     }
 
-    public void removeItem(BluetoothDevice device, BluetoothSocket socket) {
-        mDevices.remove(device);
-        mSockets.remove(socket);
-        notifyDataSetChanged();
-    }
-
-    public void removeItem(String address){
-        int i = 0;
-        for(BluetoothDevice device: mDevices){
-            if(device.getAddress().equals(address)) {
-                mDevices.remove(i);
-                mSockets.remove(i);
-                break;
-            }
-            i++;
-        }
-        notifyDataSetChanged();
-    }
-
-    public ArrayList<BluetoothSocket> getSockets(){
-        return mSockets;
-    }
-
-    public void updateItems(ArrayList<BluetoothDevice> devices, ArrayList<BluetoothSocket> sockets){
+    public void updateItems(ArrayList<BluetoothDevice> devices){
         if(devices == null)
             throw new IllegalArgumentException("parameter is null");
 
         mDevices = devices;
-        mSockets = sockets;
         notifyDataSetChanged();
     }
 
@@ -104,7 +75,7 @@ public class BluetoothServerAdapter extends RecyclerView.Adapter<BluetoothServer
     }
 
     public interface BTF_ClickListener{
-        void BTF_ItemClick(View selectedView, BluetoothDevice device, BluetoothSocket socket);
+        void BTF_ItemClick(BluetoothDevice device);
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -121,7 +92,7 @@ public class BluetoothServerAdapter extends RecyclerView.Adapter<BluetoothServer
         @Override
         public void onClick(View v) {
             if(mListener != null)
-                mListener.BTF_ItemClick(v, mDevices.get(getAdapterPosition()), mSockets.get(getAdapterPosition()));
+                mListener.BTF_ItemClick(mDevices.get(getAdapterPosition()));
         }
     }
 }
