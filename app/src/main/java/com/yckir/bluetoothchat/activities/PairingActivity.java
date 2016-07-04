@@ -8,6 +8,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.IntDef;
@@ -18,6 +19,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -29,6 +31,8 @@ import com.yckir.bluetoothchat.ChatroomUtility;
 import com.yckir.bluetoothchat.ClientConnectTask;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.recyle_adapters.PairingRecyclerAdapter;
+import com.yckir.bluetoothchat.recyle_adapters.RecyclerDivider;
+import com.yckir.bluetoothchat.recyle_adapters.RecyclerDividerDecoration;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverReceiver;
@@ -317,7 +321,11 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
             }
         });
-
+        Typeface typeface = Typeface.createFromAsset(getAssets(), "fonts/Roboto-Medium.ttf");
+        t = (TextView)findViewById(R.id.pairing_status_label);
+        t.setTypeface(typeface);
+        t = (TextView)findViewById(R.id.pairing_found_devices_label);
+        t.setTypeface(typeface);
         mMessageText = (TextView)findViewById(R.id.status_message);
         mActionText1 = (TextView)findViewById(R.id.status_action1);
         mActionText2 = (TextView)findViewById(R.id.status_action2);

@@ -1,6 +1,8 @@
 package com.yckir.bluetoothchat.recyle_adapters;
 
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
+import android.graphics.Typeface;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,8 +18,9 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
 
     private PairingItemClickListener mListener;
     private ArrayList<BluetoothDevice> mDevices;
-
-    public PairingRecyclerAdapter(){
+    private Context mContext;
+    public PairingRecyclerAdapter(Context context){
+        mContext = context;
         mDevices = new ArrayList<>(10);
     }
 
@@ -88,6 +91,10 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
             mNameTextView = (TextView) itemView.findViewById(R.id.bluetooth_name);
             mAddressTextView = (TextView) itemView.findViewById(R.id.mac_address);
             mConnectionImageView = (ImageView) itemView.findViewById(R.id.connection_icon);
+
+            Typeface typeface = Typeface.createFromAsset(mContext.getAssets(), "fonts/Roboto-Regular.ttf");
+            mNameTextView.setTypeface(typeface);
+            mAddressTextView.setTypeface(typeface);
             mConnectionImageView.setOnClickListener(this);
         }
 
