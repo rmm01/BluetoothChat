@@ -3,7 +3,6 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -11,33 +10,24 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <TextView
-            android:id="@+id/status_message"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="20dp"
-            android:paddingBottom="20dp"
-            android:layout_centerHorizontal="true"
-            android:text="@string/status_no_clients"/>
+            android:id="@+id/server_status_label"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:paddingLeft="16dp"
+            android:paddingStart="16dp"
+            android:paddingRight="16dp"
+            android:paddingEnd="16dp"
+            android:gravity="center_vertical"
+            android:textSize="14sp"
+            android:textColor="@color/secondaryText"
+            android:text="@string/pairing_label_status"/>
 
-        <TextView
-            android:id="@+id/server_bluetooth_name"
-            android:layout_width="wrap_content"
+        <include
+            android:id="@+id/msg"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="20dp"
-            android:layout_marginStart="20dp"
-            android:layout_below="@id/status_message"
-            android:text="@string/bluetooth_name_label"/>
-
-        <TextView
-            android:id="@+id/server_bluetooth_address"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="20dp"
-            android:layout_marginRight="20dp"
-            android:layout_alignBaseline="@id/server_bluetooth_name"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true"
-            tools:text="Mac Address"/>
+            android:layout_below="@id/server_status_label"
+            layout="@layout/bluetooth_activity_status"/>
 
         <TextView
             android:id="@+id/paired_devices_label"
@@ -50,7 +40,7 @@
             android:paddingRight="20dp"
             android:paddingEnd="20dp"
             android:layout_marginTop="20dp"
-            android:layout_below="@id/server_bluetooth_name"
+            android:layout_below="@id/msg"
             android:background="#aaaaaaaa"
             android:text="@string/accepted_clients_label"/>
 

@@ -25,6 +25,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.ServerAcceptTask;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
@@ -64,6 +65,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private TextView mStatusText;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
+    private ProgressWheel mMessageWheel;
     private BluetoothServerAdapter mConnectedAdapter;
     private BluetoothServerAdapter mUnconnectedAdapter;
 
@@ -242,10 +244,14 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         mStartButton = (Button)findViewById(R.id.start_button);
         mStatusText = (TextView)findViewById(R.id.status_message);
-        mBlueToothName = (TextView)findViewById(R.id.server_bluetooth_name);
-        mBlueAddress = (TextView)findViewById(R.id.server_bluetooth_address);
+        mBlueToothName = (TextView)findViewById(R.id.user_bluetooth_name);
+        mBlueAddress = (TextView)findViewById(R.id.user_bluetooth_address);
         mBlueToothName.setText( mBluetoothAdapter.getName() );
         mBlueAddress.setText( mBluetoothAdapter.getAddress() );
+
+        mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
+        assert mMessageWheel != null;
+        mMessageWheel.stopSpinning();
 
         mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
         if(mConnectedRecyclerView != null)
