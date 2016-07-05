@@ -10,6 +10,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
 import android.support.v7.widget.LinearLayoutManager;
@@ -21,7 +22,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -59,13 +59,15 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     private ActionMode mActionMode;
     private MyActionModeCallback mActionCallback;
-    private Button mStartButton;
+
     private TextView mBlueToothName;
     private TextView mBlueAddress;
     private TextView mStatusText;
     private RecyclerView mConnectedRecyclerView;
     private RecyclerView mUnconnectedRecyclerView;
     private ProgressWheel mMessageWheel;
+    private FloatingActionButton mStartFab;
+
     private BluetoothServerAdapter mConnectedAdapter;
     private BluetoothServerAdapter mUnconnectedAdapter;
 
@@ -116,7 +118,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             mActivity.get().mUnconnectedAdapter.removeItem(macAddress);
             mActivity.get().mConnectedAdapter.removeItem(macAddress);
             if(mActivity.get().mConnectedAdapter.getItemCount() < 1) {
-                mActivity.get().mStartButton.setEnabled(false);
+                mActivity.get().mStartFab.hide();
                 mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
             }
 
@@ -200,10 +202,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
                     //update status of ui message
                     if(mConnectedAdapter.getItemCount() > 0){
-                        mStartButton.setEnabled(true);
+                        mStartFab.show();
                         mStatusText.setText(R.string.status_accepted_clients);
                     }else {
-                        mStartButton.setEnabled(false);
+                        mStartFab.hide();
                         mStatusText.setText(R.string.status_no_accepted_clients);
 
                     }
@@ -242,7 +244,25 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        mStartButton = (Button)findViewById(R.id.start_button);
+        mStartFab = (FloatingActionButton)findViewById(R.id.fab);
+        mStartFab.hide();
+        mStartFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mConnectedAdapter.getItemCount() == 0)
+                    Toast.makeText(SetupServerActivity.this, "no accepted clients",Toast.LENGTH_SHORT).show();
+
+                String address;
+                for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
+                    address = socket.getRemoteDevice().getAddress();
+                    mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
+                }
+                mBinder.setHandler(null);
+                Intent intent = new Intent(SetupServerActivity.this, ChatroomActivity.class);
+                intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
+                startActivity(intent);
+            }
+        });
         mStatusText = (TextView)findViewById(R.id.status_message);
         mBlueToothName = (TextView)findViewById(R.id.user_bluetooth_name);
         mBlueAddress = (TextView)findViewById(R.id.user_bluetooth_address);
@@ -458,21 +478,5 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         mActionCallback = new MyActionModeCallback(selectedView, socket);
         mActionMode = startSupportActionMode(mActionCallback);
-    }
-
-    public void startChatroom(View view){
-
-        if(mConnectedAdapter.getItemCount() == 0)
-            Toast.makeText(this, "no accepted clients",Toast.LENGTH_SHORT).show();
-
-        String address;
-        for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
-            address = socket.getRemoteDevice().getAddress();
-            mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
-        }
-        mBinder.setHandler(null);
-        Intent intent = new Intent(this, ChatroomActivity.class);
-        intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
-        startActivity(intent);
     }
 }
