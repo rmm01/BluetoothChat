@@ -75,14 +75,283 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
 
     private ServerAcceptTask mServerTask = null;
-
     private BluetoothService.BluetoothBinder mBinder;
-
+    private ServiceConnection mBluetoothConnection;
     private MyBluetoothHandler mHandler;
 
     private boolean mConnected;
 
-    private ServiceConnection mBluetoothConnection = new ServiceConnection() {
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Log.v(TAG, "onCreate");
+
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        if( !mBluetoothAdapter.isEnabled() ) {
+            bluetoothStateChanged(BluetoothStatusReceiver.BLUETOOTH_OFF);
+        }
+
+        setContentView(R.layout.activity_setup);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        mStartFab = (FloatingActionButton)findViewById(R.id.fab);
+        mStartFab.hide();
+        mStartFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mConnectedAdapter.getItemCount() == 0)
+                    Toast.makeText(SetupServerActivity.this, "no accepted clients",Toast.LENGTH_SHORT).show();
+
+                String address;
+                for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
+                    address = socket.getRemoteDevice().getAddress();
+                    mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
+                }
+                mBinder.setHandler(null);
+                Intent intent = new Intent(SetupServerActivity.this, ChatroomActivity.class);
+                intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
+                startActivity(intent);
+            }
+        });
+        mStatusText = (TextView)findViewById(R.id.status_message);
+        mBlueToothName = (TextView)findViewById(R.id.user_bluetooth_name);
+        mBlueAddress = (TextView)findViewById(R.id.user_bluetooth_address);
+        mBlueToothName.setText( mBluetoothAdapter.getName() );
+        mBlueAddress.setText( mBluetoothAdapter.getAddress() );
+
+        mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
+        assert mMessageWheel != null;
+        mMessageWheel.stopSpinning();
+
+        mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
+        if(mConnectedRecyclerView != null)
+            mConnectedRecyclerView.setHasFixedSize(true);
+        mConnectedAdapter = new BluetoothServerAdapter();
+        mConnectedAdapter.setRecyclerItemListener(this);
+        mConnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mConnectedRecyclerView.setAdapter(mConnectedAdapter);
+
+        mUnconnectedRecyclerView = (RecyclerView)findViewById(R.id.unconnected_devices_recycler_view);
+        if(mUnconnectedRecyclerView != null)
+            mUnconnectedRecyclerView.setHasFixedSize(true);
+        mUnconnectedAdapter = new BluetoothServerAdapter();
+        mUnconnectedAdapter.setRecyclerItemListener(this);
+        mUnconnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mUnconnectedRecyclerView.setAdapter(mUnconnectedAdapter);
+
+        mHandler = new MyBluetoothHandler(this);
+        mBluetoothConnection = new MyBluetoothConnection();
+        bindService(new Intent(this, BluetoothService.class), mBluetoothConnection,BIND_AUTO_CREATE);
+    }
+
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.v(TAG, "onStart");
+
+        if(mBTStatusReceiver == null) {
+            mBTStatusReceiver = new BluetoothStatusReceiver();
+            mBTStatusReceiver.setListener(this);
+            registerReceiver(mBTStatusReceiver, BluetoothStatusReceiver.getIntentFilter());
+
+            mBTDStateReceiver = new BluetoothDiscoverStateReceiver();
+            mBTDStateReceiver.setListener(this);
+            registerReceiver(mBTDStateReceiver, BluetoothDiscoverStateReceiver.getIntentFilter());
+        }
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.v(TAG, "onResume");
+
+        //since receivers are unregistered when activity goes into background, need to ensure that
+        //the device is in the proper state
+
+        //make sure that bluetooth is enabled
+        if( !mBluetoothAdapter.isEnabled() ) {
+            bluetoothStateChanged(BluetoothStatusReceiver.BLUETOOTH_OFF);
+        }
+
+        //make sure that the server is started if currently discoverable
+        if(mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+            startServer();
+        }
+
+        //make sure that currently discoverable
+        makeDiscoverable();
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.v(TAG, "onPause");
+    }
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.v(TAG, "onStop");
+        //stop server if going into background
+        stopServer();
+
+        //unregister all receivers
+        if(mBTStatusReceiver != null) {
+            unregisterReceiver(mBTStatusReceiver);
+            mBTStatusReceiver = null;
+            unregisterReceiver(mBTDStateReceiver);
+            mBTDStateReceiver = null;
+        }
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.v(TAG, "onDestroy");
+        if(mConnected)
+            unbindService(mBluetoothConnection);
+
+        //on onServiceDisconnected may not be called since we are disconnecting gracefully.
+        mConnected = false;
+        mBinder = null;
+    }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // request code and result code should both be equal to the duration of discovery if successful
+        if(requestCode == DISCOVERY_DURATION) {
+            mRequestingDiscoverable = false;
+            if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(this, "server must be discoverable", Toast.LENGTH_LONG).show();
+                finish();
+            }else if(resultCode ==  DISCOVERY_DURATION) {
+                // if discovery is happening, then start the server
+                startServer();
+            }else{
+                Log.e(TAG, "unknown result code: " + resultCode);
+            }
+        }else{
+            Log.e(TAG, "unknown request code: " + requestCode);
+        }
+    }
+
+
+    /**
+     * make a request to make device discoverable, onActivityResult will have the result.
+     */
+    public void makeDiscoverable(){
+        //corner case where turning off bluetooth also makes device undiscoverable
+        //this will cause activity to finish and also request to make device discoverable
+        if(!mBluetoothAdapter.isEnabled())
+            return;
+
+
+        if(mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE
+                && !mRequestingDiscoverable) {
+
+            Log.v(TAG, "makeDiscoverable");
+
+            mRequestingDiscoverable = true;
+            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, DISCOVERY_DURATION);
+            startActivityForResult(discoverableIntent, DISCOVERY_DURATION);
+        }
+    }
+
+
+    /**
+     * start the server if not already running
+     */
+    public void startServer() {
+        if(mServerTask == null) {
+            Log.v(TAG, "startServer");
+            mServerTask = new ServerAcceptTask(mBluetoothAdapter, ServiceUtility.getBTChatUUID(), ServiceUtility.SDP_NAME);
+            mServerTask.setListener(this);
+            mServerTask.execute();
+        }
+    }
+
+
+    /**
+     * stop the server if running
+     */
+    public void stopServer() {
+        if(mServerTask != null) {
+            Log.v(TAG, "stopServer");
+            mServerTask.cancel(true);
+            mServerTask.cancelServer();
+            mServerTask = null;
+        }
+    }
+
+
+    @Override
+    public void bluetoothStateChanged(@BluetoothStatusReceiver.BLUETOOTH_STATE int state){
+        switch (state) {
+            case BluetoothStatusReceiver.BLUETOOTH_OFF:
+                Toast.makeText(this, "bluetooth off, server has shutdown", Toast.LENGTH_LONG).show();
+                stopServer();
+                finish();
+                break;
+            case BluetoothStatusReceiver.BLUETOOTH_ON:
+            case BluetoothStatusReceiver.BLUETOOTH_TURNING_ON:
+            case BluetoothStatusReceiver.BLUETOOTH_TURNING_OFF:
+                break;
+        }
+    }
+
+
+    @Override
+    public void discoverable() {
+    }
+
+
+    @Override
+    public void undiscoverable() {
+         stopServer();
+         makeDiscoverable();
+    }
+
+
+    @Override
+    public void foundClient(BluetoothSocket clientSocket) {
+        mUnconnectedAdapter.addItem(clientSocket.getRemoteDevice(), clientSocket);
+        if(!mConnected) {
+            Log.e(TAG, "not connected to BluetoothService when a server is found");
+            return;
+        }
+
+        mStatusText.setText(R.string.status_no_accepted_clients);
+
+        mBinder.addSocket(clientSocket);
+    }
+
+
+    @Override
+    public void BTF_ItemClick(View selectedView, BluetoothDevice device, BluetoothSocket socket) {
+        if(mActionMode!= null)
+            return;
+
+        mActionCallback = new MyActionModeCallback(selectedView, socket);
+        mActionMode = startSupportActionMode(mActionCallback);
+    }
+
+
+    private class MyBluetoothConnection implements ServiceConnection{
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.v(TAG, "BluetoothConnection connected" );
@@ -97,7 +366,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             mConnected = false;
             mBinder = null;
         }
-    };
+    }
+
 
     private static class MyBluetoothHandler extends BluetoothServiceHandler{
 
@@ -138,6 +408,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         }
     }
+
 
     /**
      * Receives callbacks for the action mode that appears when a recycler item is clicked. The item
@@ -211,8 +482,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
                     }
                     mode.finish();
                     return true;
-                }
-                return false;
+            }
+            return false;
 
         }
 
@@ -222,261 +493,5 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             mActionMode = null;
             mActionCallback = null;
         }
-    }
-
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Log.v(TAG, "onCreate");
-
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-
-        if( !mBluetoothAdapter.isEnabled() ) {
-            bluetoothStateChanged(BluetoothStatusReceiver.BLUETOOTH_OFF);
-        }
-
-        setContentView(R.layout.activity_setup);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        mStartFab = (FloatingActionButton)findViewById(R.id.fab);
-        mStartFab.hide();
-        mStartFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mConnectedAdapter.getItemCount() == 0)
-                    Toast.makeText(SetupServerActivity.this, "no accepted clients",Toast.LENGTH_SHORT).show();
-
-                String address;
-                for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
-                    address = socket.getRemoteDevice().getAddress();
-                    mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
-                }
-                mBinder.setHandler(null);
-                Intent intent = new Intent(SetupServerActivity.this, ChatroomActivity.class);
-                intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
-                startActivity(intent);
-            }
-        });
-        mStatusText = (TextView)findViewById(R.id.status_message);
-        mBlueToothName = (TextView)findViewById(R.id.user_bluetooth_name);
-        mBlueAddress = (TextView)findViewById(R.id.user_bluetooth_address);
-        mBlueToothName.setText( mBluetoothAdapter.getName() );
-        mBlueAddress.setText( mBluetoothAdapter.getAddress() );
-
-        mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
-        assert mMessageWheel != null;
-        mMessageWheel.stopSpinning();
-
-        mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
-        if(mConnectedRecyclerView != null)
-            mConnectedRecyclerView.setHasFixedSize(true);
-        mConnectedAdapter = new BluetoothServerAdapter();
-        mConnectedAdapter.setRecyclerItemListener(this);
-        mConnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mConnectedRecyclerView.setAdapter(mConnectedAdapter);
-
-        mUnconnectedRecyclerView = (RecyclerView)findViewById(R.id.unconnected_devices_recycler_view);
-        if(mUnconnectedRecyclerView != null)
-            mUnconnectedRecyclerView.setHasFixedSize(true);
-        mUnconnectedAdapter = new BluetoothServerAdapter();
-        mUnconnectedAdapter.setRecyclerItemListener(this);
-        mUnconnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mUnconnectedRecyclerView.setAdapter(mUnconnectedAdapter);
-
-        mHandler = new MyBluetoothHandler(this);
-
-        bindService(new Intent(this, BluetoothService.class), mBluetoothConnection,BIND_AUTO_CREATE);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.v(TAG, "onStart");
-
-        if(mBTStatusReceiver == null) {
-            mBTStatusReceiver = new BluetoothStatusReceiver();
-            mBTStatusReceiver.setListener(this);
-            registerReceiver(mBTStatusReceiver, BluetoothStatusReceiver.getIntentFilter());
-
-            mBTDStateReceiver = new BluetoothDiscoverStateReceiver();
-            mBTDStateReceiver.setListener(this);
-            registerReceiver(mBTDStateReceiver, BluetoothDiscoverStateReceiver.getIntentFilter());
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.v(TAG, "onResume");
-
-        //since receivers are unregistered when activity goes into background, need to ensure that
-        //the device is in the proper state
-
-        //make sure that bluetooth is enabled
-        if( !mBluetoothAdapter.isEnabled() ) {
-            bluetoothStateChanged(BluetoothStatusReceiver.BLUETOOTH_OFF);
-        }
-
-        //make sure that the server is started if currently discoverable
-        if(mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-            startServer();
-        }
-
-        //make sure that currently discoverable
-        makeDiscoverable();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.v(TAG, "onPause");
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.v(TAG, "onStop");
-        //stop server if going into background
-        stopServer();
-
-        //unregister all receivers
-        if(mBTStatusReceiver != null) {
-            unregisterReceiver(mBTStatusReceiver);
-            mBTStatusReceiver = null;
-            unregisterReceiver(mBTDStateReceiver);
-            mBTDStateReceiver = null;
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.v(TAG, "onDestroy");
-        if(mConnected)
-            unbindService(mBluetoothConnection);
-
-        //on onServiceDisconnected may not be called since we are disconnecting gracefully.
-        mConnected = false;
-        mBinder = null;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        // request code and result code should both be equal to the duration of discovery if successful
-        if(requestCode == DISCOVERY_DURATION) {
-            mRequestingDiscoverable = false;
-            if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this, "server must be discoverable", Toast.LENGTH_LONG).show();
-                finish();
-            }else if(resultCode ==  DISCOVERY_DURATION) {
-                // if discovery is happening, then start the server
-                startServer();
-            }else{
-                Log.e(TAG, "unknown result code: " + resultCode);
-            }
-        }else{
-            Log.e(TAG, "unknown request code: " + requestCode);
-        }
-    }
-
-    /**
-     * make a request to make device discoverable, onActivityResult will have the result.
-     */
-    public void makeDiscoverable(){
-        //corner case where turning off bluetooth also makes device undiscoverable
-        //this will cause activity to finish and also request to make device discoverable
-        if(!mBluetoothAdapter.isEnabled())
-            return;
-
-
-        if(mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE
-                && !mRequestingDiscoverable) {
-
-            Log.v(TAG, "makeDiscoverable");
-
-            mRequestingDiscoverable = true;
-            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, DISCOVERY_DURATION);
-            startActivityForResult(discoverableIntent, DISCOVERY_DURATION);
-        }
-    }
-
-    /**
-     * start the server if not already running
-     */
-    public void startServer() {
-        if(mServerTask == null) {
-            Log.v(TAG, "startServer");
-            mServerTask = new ServerAcceptTask(mBluetoothAdapter, ServiceUtility.getBTChatUUID(), ServiceUtility.SDP_NAME);
-            mServerTask.setListener(this);
-            mServerTask.execute();
-        }
-    }
-
-    /**
-     * stop the server if running
-     */
-    public void stopServer() {
-        if(mServerTask != null) {
-            Log.v(TAG, "stopServer");
-            mServerTask.cancel(true);
-            mServerTask.cancelServer();
-            mServerTask = null;
-        }
-    }
-
-    @Override
-    public void bluetoothStateChanged(@BluetoothStatusReceiver.BLUETOOTH_STATE int state){
-        switch (state) {
-            case BluetoothStatusReceiver.BLUETOOTH_OFF:
-                Toast.makeText(this, "bluetooth off, server has shutdown", Toast.LENGTH_LONG).show();
-                stopServer();
-                finish();
-                break;
-            case BluetoothStatusReceiver.BLUETOOTH_ON:
-            case BluetoothStatusReceiver.BLUETOOTH_TURNING_ON:
-            case BluetoothStatusReceiver.BLUETOOTH_TURNING_OFF:
-                break;
-        }
-    }
-
-
-    @Override
-    public void discoverable() {
-    }
-
-    @Override
-    public void undiscoverable() {
-         stopServer();
-         makeDiscoverable();
-    }
-
-    @Override
-    public void foundClient(BluetoothSocket clientSocket) {
-        mUnconnectedAdapter.addItem(clientSocket.getRemoteDevice(), clientSocket);
-        if(!mConnected) {
-            Log.e(TAG, "not connected to BluetoothService when a server is found");
-            return;
-        }
-
-        mStatusText.setText(R.string.status_no_accepted_clients);
-
-        mBinder.addSocket(clientSocket);
-    }
-
-    @Override
-    public void BTF_ItemClick(View selectedView, BluetoothDevice device, BluetoothSocket socket) {
-        if(mActionMode!= null)
-            return;
-
-        mActionCallback = new MyActionModeCallback(selectedView, socket);
-        mActionMode = startSupportActionMode(mActionCallback);
     }
 }
