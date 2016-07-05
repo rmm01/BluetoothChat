@@ -23,7 +23,7 @@
         app:matProg_progressIndeterminate="true"/>
 
     <TextView
-        android:id="@+id/client_bluetooth_name"
+        android:id="@+id/user_bluetooth_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="16sp"
@@ -31,10 +31,10 @@
         tools:text="Bluetooth name"/>
 
     <TextView
-        android:id="@+id/client_bluetooth_address"
+        android:id="@+id/user_bluetooth_address"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/client_bluetooth_name"
+        android:layout_below="@id/user_bluetooth_name"
         android:paddingBottom="8dp"
         android:textSize="14sp"
         android:textColor="@color/secondaryText"
@@ -45,7 +45,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
-        android:layout_below="@id/client_bluetooth_address"
+        android:layout_below="@id/user_bluetooth_address"
         android:textColor="@color/primaryText"
         android:lines="2"
         tools:text="message"/>

@@ -254,11 +254,11 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
         mBluetoothConnection = new BluetoothServiceConnection();
 
-        TextView t = ((TextView)findViewById(R.id.client_bluetooth_name));
+        TextView t = ((TextView)findViewById(R.id.user_bluetooth_name));
         if (t != null)
             t.setText( mBluetoothAdapter.getName() );
 
-        t = (TextView)findViewById(R.id.client_bluetooth_address);
+        t = (TextView)findViewById(R.id.user_bluetooth_address);
         if (t != null)
             t.setText( mBluetoothAdapter.getAddress() );
 
