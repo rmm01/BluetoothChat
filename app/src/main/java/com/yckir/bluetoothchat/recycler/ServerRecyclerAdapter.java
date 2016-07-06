@@ -57,8 +57,7 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
     @Override
     public ServerRecyclerAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.recycler_item, parent, false);
-
+                .inflate(R.layout.recycler_item_setup_server, parent, false);
         return new MyViewHolder(v);
     }
 
@@ -304,6 +303,7 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
         public TextView mNameTextView;
         public TextView mAddressTextView;
         public ImageView mStatusImageView;
+        public ImageView mExtrasImageView;
 
         /**
          * Constructs a view holder.
@@ -312,10 +312,12 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
          */
         public MyViewHolder(View view) {
             super(view);
-            mNameTextView = (TextView) view.findViewById(R.id.vh_name);
-            mAddressTextView = (TextView) view.findViewById(R.id.vh_address);
-            mStatusImageView = (ImageView) view.findViewById(R.id.vh_image);
-            view.setOnClickListener(this);
+            mNameTextView = (TextView) view.findViewById(R.id.bluetooth_name);
+            mAddressTextView = (TextView) view.findViewById(R.id.bluetooth_address);
+            mStatusImageView = (ImageView) view.findViewById(R.id.status_icon);
+            mExtrasImageView = (ImageView) view.findViewById(R.id.recycler_item_extras);
+
+            mExtrasImageView.setOnClickListener(this);
         }
 
         @Override
