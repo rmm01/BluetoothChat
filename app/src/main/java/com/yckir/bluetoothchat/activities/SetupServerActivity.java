@@ -2,7 +2,6 @@ package com.yckir.bluetoothchat.activities;
 
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -28,12 +27,12 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.ServerAcceptTask;
+import com.yckir.bluetoothchat.recycler.ServerRecyclerAdapter;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
 import com.yckir.bluetoothchat.receivers.BluetoothDiscoverStateReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver;
 import com.yckir.bluetoothchat.receivers.BluetoothStatusReceiver.BlueToothStatusListener;
-import com.yckir.bluetoothchat.recycler.BluetoothServerAdapter;
 import com.yckir.bluetoothchat.services.BluetoothService;
 
 
@@ -47,7 +46,8 @@ import java.lang.ref.WeakReference;
  * unregistered in onStart and onStop.
  */
 public class SetupServerActivity extends AppCompatActivity implements BlueToothStatusListener,
-        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener, ServerAcceptTask.ServerEventListener, BluetoothServerAdapter.BTF_ClickListener {
+        BluetoothDiscoverStateReceiver.BlueToothDiscoverStateListener,
+        ServerAcceptTask.ServerEventListener, ServerRecyclerAdapter.ServerItemClickListener {
 
     private static final String TAG = "SetupServer";
     private static final int DISCOVERY_DURATION = 180;
@@ -63,13 +63,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private TextView mBlueToothName;
     private TextView mBlueAddress;
     private TextView mStatusText;
-    private RecyclerView mConnectedRecyclerView;
-    private RecyclerView mUnconnectedRecyclerView;
     private ProgressWheel mMessageWheel;
     private FloatingActionButton mStartFab;
-
-    private BluetoothServerAdapter mConnectedAdapter;
-    private BluetoothServerAdapter mUnconnectedAdapter;
+    private RecyclerView mRecyclerView;
+    private ServerRecyclerAdapter mRecyclerAdapter;
 
     private BluetoothStatusReceiver mBTStatusReceiver = null;
     private BluetoothDiscoverStateReceiver mBTDStateReceiver = null;
@@ -78,7 +75,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     private BluetoothService.BluetoothBinder mBinder;
     private ServiceConnection mBluetoothConnection;
     private MyBluetoothHandler mHandler;
-
     private boolean mConnected;
 
     @Override
@@ -106,14 +102,14 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mStartFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mConnectedAdapter.getItemCount() == 0)
-                    Toast.makeText(SetupServerActivity.this, "no accepted clients",Toast.LENGTH_SHORT).show();
-
-                String address;
-                for(BluetoothSocket socket : mUnconnectedAdapter.getSockets()){
-                    address = socket.getRemoteDevice().getAddress();
-                    mBinder.removeSocket(address, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
+                if(mRecyclerAdapter.getNumSockets(ServerRecyclerAdapter.ACCEPTED) == 0) {
+                    Toast.makeText(SetupServerActivity.this, "no accepted clients", Toast.LENGTH_SHORT).show();
+                    return;
                 }
+
+                for(BluetoothSocket socket : mRecyclerAdapter.getSockets(ServerRecyclerAdapter.UNACCEPTED))
+                    mBinder.removeSocket(socket.getRemoteDevice().getAddress(), ServiceUtility.CLOSE_KICKED_FROM_SERVER);
+
                 mBinder.setHandler(null);
                 Intent intent = new Intent(SetupServerActivity.this, ChatroomActivity.class);
                 intent.putExtra(ChatroomActivity.EXTRA_SERVER, true);
@@ -122,29 +118,18 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         });
         mStatusText = (TextView)findViewById(R.id.status_message);
         mBlueToothName = (TextView)findViewById(R.id.user_bluetooth_name);
-        mBlueAddress = (TextView)findViewById(R.id.user_bluetooth_address);
         mBlueToothName.setText( mBluetoothAdapter.getName() );
+        mBlueAddress = (TextView)findViewById(R.id.user_bluetooth_address);
         mBlueAddress.setText( mBluetoothAdapter.getAddress() );
 
         mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
         assert mMessageWheel != null;
         mMessageWheel.stopSpinning();
 
-        mConnectedRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
-        if(mConnectedRecyclerView != null)
-            mConnectedRecyclerView.setHasFixedSize(true);
-        mConnectedAdapter = new BluetoothServerAdapter();
-        mConnectedAdapter.setRecyclerItemListener(this);
-        mConnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mConnectedRecyclerView.setAdapter(mConnectedAdapter);
-
-        mUnconnectedRecyclerView = (RecyclerView)findViewById(R.id.unconnected_devices_recycler_view);
-        if(mUnconnectedRecyclerView != null)
-            mUnconnectedRecyclerView.setHasFixedSize(true);
-        mUnconnectedAdapter = new BluetoothServerAdapter();
-        mUnconnectedAdapter.setRecyclerItemListener(this);
-        mUnconnectedRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mUnconnectedRecyclerView.setAdapter(mUnconnectedAdapter);
+        mRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
+        mRecyclerAdapter = new ServerRecyclerAdapter(this);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mRecyclerView.setAdapter(mRecyclerAdapter);
 
         mHandler = new MyBluetoothHandler(this);
         mBluetoothConnection = new MyBluetoothConnection();
@@ -259,7 +244,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         if(!mBluetoothAdapter.isEnabled())
             return;
 
-
         if(mBluetoothAdapter.getScanMode() != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE
                 && !mRequestingDiscoverable) {
 
@@ -329,24 +313,21 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     @Override
     public void foundClient(BluetoothSocket clientSocket) {
-        mUnconnectedAdapter.addItem(clientSocket.getRemoteDevice(), clientSocket);
         if(!mConnected) {
             Log.e(TAG, "not connected to BluetoothService when a server is found");
             return;
         }
-
+        mRecyclerAdapter.addItem(ServerRecyclerAdapter.UNACCEPTED, clientSocket);
         mStatusText.setText(R.string.status_no_accepted_clients);
-
         mBinder.addSocket(clientSocket);
     }
 
-
     @Override
-    public void BTF_ItemClick(View selectedView, BluetoothDevice device, BluetoothSocket socket) {
-        if(mActionMode!= null)
+    public void itemClick(View clickedView, BluetoothSocket socket) {
+        if(mActionMode != null)
             return;
 
-        mActionCallback = new MyActionModeCallback(selectedView, socket);
+        mActionCallback = new MyActionModeCallback(clickedView, socket);
         mActionMode = startSupportActionMode(mActionCallback);
     }
 
@@ -385,9 +366,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         @Override
         public void connectionClosed(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode) {
-            mActivity.get().mUnconnectedAdapter.removeItem(macAddress);
-            mActivity.get().mConnectedAdapter.removeItem(macAddress);
-            if(mActivity.get().mConnectedAdapter.getItemCount() < 1) {
+            mActivity.get().mRecyclerAdapter.removeItem(macAddress);
+            if(mActivity.get().mRecyclerAdapter.getNumSockets(ServerRecyclerAdapter.ACCEPTED) < 1) {
                 mActivity.get().mStartFab.hide();
                 mActivity.get().mStatusText.setText(R.string.status_no_accepted_clients);
             }
@@ -463,16 +443,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
                     return true;
                 case R.id.menu_swap:
                     //swap the location of the recycler item
-                    if(mUnconnectedAdapter.contains(address) ) {
-                        mConnectedAdapter.addItem(mSocket.getRemoteDevice(), mSocket);
-                        mUnconnectedAdapter.removeItem(address);
-                    }else{
-                        mConnectedAdapter.removeItem(address);
-                        mUnconnectedAdapter.addItem(mSocket.getRemoteDevice(), mSocket);
-                    }
+                    mRecyclerAdapter.changeItemType(ServerRecyclerAdapter.ALL, mSocket);
 
                     //update status of ui message
-                    if(mConnectedAdapter.getItemCount() > 0){
+                    if(mRecyclerAdapter.getNumSockets(ServerRecyclerAdapter.ACCEPTED) > 0){
                         mStartFab.show();
                         mStatusText.setText(R.string.status_accepted_clients);
                     }else {
