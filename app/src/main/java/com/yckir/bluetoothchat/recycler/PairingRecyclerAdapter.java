@@ -28,7 +28,7 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.pairing_recycler_item, parent, false);
+                .inflate(R.layout.recycler_item_pairing, parent, false);
 
         return new MyViewHolder(v);
     }
