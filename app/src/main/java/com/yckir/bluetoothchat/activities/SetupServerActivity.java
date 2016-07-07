@@ -327,7 +327,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         if(mActionMode != null)
             return;
 
-        mActionCallback = new MyActionModeCallback(clickedView, socket);
+        if(mRecyclerAdapter.contains(ServerRecyclerAdapter.ACCEPTED, socket.getRemoteDevice().getAddress()))
+            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.ACCEPTED, clickedView, socket );
+        else
+            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.UNACCEPTED, clickedView, socket );
         mActionMode = startSupportActionMode(mActionCallback);
     }
 
@@ -400,6 +403,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         private BluetoothSocket mSocket;
         private View mSelectedView;
         private String mAddress;
+        private @ServerRecyclerAdapter.ITEM_TYPE int mItemType;
 
         /**
          * Action mode callback for when a recycler item is selected.
@@ -407,10 +411,11 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
          * @param view view that is starting the action mode
          * @param socket socket of the recycler item that was clicked.
          */
-        public MyActionModeCallback(View view, BluetoothSocket socket){
+        public MyActionModeCallback(@ServerRecyclerAdapter.ITEM_TYPE int itemType, View view, BluetoothSocket socket){
             mSelectedView = view;
             mSocket = socket;
             mAddress = socket.getRemoteDevice().getAddress();
+            mItemType = itemType;
         }
 
         /**
@@ -422,6 +427,17 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             MenuInflater inflater = mode.getMenuInflater();
             inflater.inflate(R.menu.setup_server_recycler_item, menu);
+
+            MenuItem item = menu.findItem(R.id.menu_swap);
+
+            if(item == null)
+                return true;
+
+            if(mItemType == ServerRecyclerAdapter.ACCEPTED )
+                item.setIcon(R.drawable.ic_person_remove_white_24dp);
+            else
+                item.setIcon(R.drawable.ic_person_add_white_24dp);
+
             return true;
         }
 
