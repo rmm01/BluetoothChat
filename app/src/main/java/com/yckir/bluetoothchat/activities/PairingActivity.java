@@ -393,7 +393,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     public void discoveryStarted() {
         mMessageWheel.spin();
         mAdapter.addItems(getPairs());
-        if(mAdapter.getItemCount() > 0)
+        if(mAdapter.getItemCount() > 1)
             changeState(FINDING_NOT_EMPTY);
         else
             changeState(FINDING_EMPTY);
@@ -413,7 +413,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         //not sure of possibility if connecting is much faster that closing discovery
         if(mState == CONNECTING || mState == CONNECTED)
             return;
-        if(mAdapter.getItemCount() > 0)
+        if(mAdapter.getItemCount() > 1)
             changeState(FOUND_DEVICES);
         else
             changeState(DEFAULT);

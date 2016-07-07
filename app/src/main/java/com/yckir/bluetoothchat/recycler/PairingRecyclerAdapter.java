@@ -45,6 +45,12 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
     }
 
 
+    /**
+     * Gets the number of items in the recycler view. By default their is always an empty item as
+     * the last item. this is done so that a floatingActionButton will not obscure the last element.
+     *
+     * @return the number of items in the recycler view, always at least 1.
+     */
     @Override
     public int getItemCount() {
         return mDevices.size() + 1;
