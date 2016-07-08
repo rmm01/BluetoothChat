@@ -3,7 +3,6 @@ package com.yckir.bluetoothchat.recycler;
 import android.bluetooth.BluetoothSocket;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -64,6 +63,12 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
 
     @Override
     public void onBindViewHolder(ServerRecyclerAdapter.MyViewHolder holder, int position) {
+        if(position == mAccepted.size() + mUnaccepted.size()) {
+            holder.setVisible(false);
+            return;
+        }
+        holder.setVisible(true);
+
         boolean connected = position < mAccepted.size();
         if(connected){
             holder.mNameTextView.setText(mAccepted.get(position).getRemoteDevice().getName());
@@ -77,10 +82,15 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
         }
     }
 
-
+    /**
+     * Gets the number of items in the recycler view. By default their is always an empty item as
+     * the last item. this is done so that a floatingActionButton will not obscure the last element.
+     *
+     * @return the number of items in the recycler view, always at least 1.
+     */
     @Override
     public int getItemCount() {
-        return mAccepted.size() + mUnaccepted.size();
+        return mAccepted.size() + mUnaccepted.size() + 1;
     }
 
 
@@ -318,6 +328,26 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
             mExtrasImageView = (ImageView) view.findViewById(R.id.recycler_item_extras);
 
             mExtrasImageView.setOnClickListener(this);
+        }
+
+
+        /**
+         * set the visibility of the recycler items.
+         * @param visible true if the items should be VISIBLE, false if they should be INVISIBLE.
+         */
+        public void setVisible(boolean visible) {
+            if (visible) {
+                mNameTextView.setVisibility(View.VISIBLE);
+                mAddressTextView.setVisibility(View.VISIBLE);
+                mStatusImageView.setVisibility(View.VISIBLE);
+                mExtrasImageView.setVisibility(View.VISIBLE);
+            } else {
+                mNameTextView.setVisibility(View.INVISIBLE);
+                mAddressTextView.setVisibility(View.INVISIBLE);
+                mStatusImageView.setVisibility(View.INVISIBLE);
+                mExtrasImageView.setVisibility(View.INVISIBLE);
+                mExtrasImageView.setSelected(false);
+            }
         }
 
         @Override

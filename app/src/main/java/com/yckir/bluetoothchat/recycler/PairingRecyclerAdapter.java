@@ -36,9 +36,9 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
     @Override
     public void onBindViewHolder(MyViewHolder holder, int position) {
         if(position == mDevices.size()){
-            holder.mConnectionImageView.setVisibility(View.INVISIBLE);
+            holder.setVisible(false);
         }else {
-            holder.mConnectionImageView.setVisibility(View.VISIBLE);
+            holder.setVisible(true);
             holder.mNameTextView.setText(mDevices.get(position).getName());
             holder.mAddressTextView.setText(mDevices.get(position).getAddress());
         }
@@ -105,6 +105,22 @@ public class PairingRecyclerAdapter extends RecyclerView.Adapter<PairingRecycler
             mNameTextView.setTypeface(typeface);
             mAddressTextView.setTypeface(typeface);
             mConnectionImageView.setOnClickListener(this);
+        }
+
+        /**
+         * set the visibility of the recycler items.
+         * @param visible true if the items should be VISIBLE, false if they should be INVISIBLE.
+         */
+        public void setVisible(boolean visible){
+            if (visible) {
+                mNameTextView.setVisibility(View.VISIBLE);
+                mAddressTextView.setVisibility(View.VISIBLE);
+                mConnectionImageView.setVisibility(View.VISIBLE);
+            } else {
+                mNameTextView.setVisibility(View.INVISIBLE);
+                mAddressTextView.setVisibility(View.INVISIBLE);
+                mConnectionImageView.setVisibility(View.INVISIBLE);
+            }
         }
 
         @Override
