@@ -17,6 +17,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 
+import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -27,6 +28,8 @@ import android.widget.Toast;
 import com.pnikosis.materialishprogress.ProgressWheel;
 import com.yckir.bluetoothchat.R;
 import com.yckir.bluetoothchat.ServerAcceptTask;
+import com.yckir.bluetoothchat.recycler.RecyclerDivider;
+import com.yckir.bluetoothchat.recycler.RecyclerDividerDecoration;
 import com.yckir.bluetoothchat.recycler.ServerRecyclerAdapter;
 import com.yckir.bluetoothchat.services.BluetoothServiceHandler;
 import com.yckir.bluetoothchat.services.ServiceUtility;
@@ -130,6 +133,10 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mRecyclerAdapter = new ServerRecyclerAdapter(this);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(mRecyclerAdapter);
+
+        int px = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+        mRecyclerView.addItemDecoration(new RecyclerDivider(px));
+        mRecyclerView.addItemDecoration(new RecyclerDividerDecoration(this));
 
         mHandler = new MyBluetoothHandler(this);
         mBluetoothConnection = new MyBluetoothConnection();
