@@ -331,14 +331,23 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
     @Override
     public void itemClick(BluetoothSocket socket) {
-        if(mActionMode != null)
-            return;
+        //Since recycler adapter is using this callback, it can be assumed that the socket is in the
+        //adapter and thus, is either ACCEPTED or UNACCEPTED
 
-        if(mRecyclerAdapter.contains(ServerRecyclerAdapter.ACCEPTED, socket.getRemoteDevice().getAddress()))
-            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.ACCEPTED, socket );
+        String address = socket.getRemoteDevice().getAddress();
+        boolean connected = mRecyclerAdapter.contains(ServerRecyclerAdapter.ACCEPTED, address);
+        int type = connected ? ServerRecyclerAdapter.ACCEPTED : ServerRecyclerAdapter.UNACCEPTED;
+
+        if(mActionCallback == null)
+            mActionCallback = new MyActionModeCallback(type, socket);
         else
-            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.UNACCEPTED, socket );
-        mActionMode = startSupportActionMode(mActionCallback);
+            mActionCallback.setData(type, socket);
+
+
+        if(mActionMode == null)
+            mActionMode = startSupportActionMode(mActionCallback);
+        else
+            mActionMode.invalidate();
     }
 
 
@@ -383,7 +392,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             }
 
             //close acton mode if it is open for the disconnected device
-            if(mActivity.get().mActionCallback != null
+            if(mActivity.get().mActionMode != null
                     && mActivity.get().mActionCallback.getAddress().equals(macAddress)){
                 mActivity.get().mActionMode.finish();
             }
@@ -414,6 +423,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         /**
          * Action mode callback for when a recycler item is selected.
          *
+         * @param itemType the item type of the selected socket
          * @param socket socket of the recycler item that was clicked.
          */
         public MyActionModeCallback(@ServerRecyclerAdapter.ITEM_TYPE int itemType, BluetoothSocket socket){
@@ -427,11 +437,33 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
          */
         public String getAddress(){return mAddress;}
 
+
+        /**
+         * sets the fields for the callback.
+         *
+         * @param itemType the item type of the selected socket
+         * @param socket socket of the recycler item that was clicked.
+         */
+        public void setData(@ServerRecyclerAdapter.ITEM_TYPE int itemType, BluetoothSocket socket){
+            mSocket = socket;
+            mAddress = socket.getRemoteDevice().getAddress();
+            mItemType = itemType;
+        }
+
         @Override
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             Log.v(TAG, "onCreateActionMode: " + mAddress);
             MenuInflater inflater = mode.getMenuInflater();
             inflater.inflate(R.menu.setup_server_recycler_item, menu);
+            return true;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            Log.v(TAG, "onPrepareActionMode: " + mAddress);
+            mRecyclerAdapter.setSelectedItemAddress(mAddress);
+
+            mActionMode.setTitle(mSocket.getRemoteDevice().getName());
 
             MenuItem item = menu.findItem(R.id.menu_swap);
 
@@ -444,13 +476,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
                 item.setIcon(R.drawable.ic_person_add_white_24dp);
 
             return true;
-        }
-
-        @Override
-        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-            Log.v(TAG, "onPrepareActionMode: " + mAddress);
-            mRecyclerAdapter.setSelectedItemAddress(mAddress);
-            return false;
         }
 
         @Override
@@ -488,7 +513,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             Log.v(TAG, "onDestroyActionMode: " + mAddress);
             mRecyclerAdapter.removeSelectedItem();
             mActionMode = null;
-            mActionCallback = null;
         }
     }
 }
