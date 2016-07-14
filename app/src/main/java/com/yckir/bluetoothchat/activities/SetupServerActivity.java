@@ -330,14 +330,14 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
     }
 
     @Override
-    public void itemClick(View clickedView, BluetoothSocket socket) {
+    public void itemClick(BluetoothSocket socket) {
         if(mActionMode != null)
             return;
 
         if(mRecyclerAdapter.contains(ServerRecyclerAdapter.ACCEPTED, socket.getRemoteDevice().getAddress()))
-            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.ACCEPTED, clickedView, socket );
+            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.ACCEPTED, socket );
         else
-            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.UNACCEPTED, clickedView, socket );
+            mActionCallback = new MyActionModeCallback(ServerRecyclerAdapter.UNACCEPTED, socket );
         mActionMode = startSupportActionMode(mActionCallback);
     }
 
@@ -408,18 +408,15 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
      */
     private class MyActionModeCallback implements ActionMode.Callback{
         private BluetoothSocket mSocket;
-        private View mSelectedView;
         private String mAddress;
         private @ServerRecyclerAdapter.ITEM_TYPE int mItemType;
 
         /**
          * Action mode callback for when a recycler item is selected.
          *
-         * @param view view that is starting the action mode
          * @param socket socket of the recycler item that was clicked.
          */
-        public MyActionModeCallback(@ServerRecyclerAdapter.ITEM_TYPE int itemType, View view, BluetoothSocket socket){
-            mSelectedView = view;
+        public MyActionModeCallback(@ServerRecyclerAdapter.ITEM_TYPE int itemType, BluetoothSocket socket){
             mSocket = socket;
             mAddress = socket.getRemoteDevice().getAddress();
             mItemType = itemType;
@@ -432,6 +429,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         @Override
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            Log.v(TAG, "onCreateActionMode: " + mAddress);
             MenuInflater inflater = mode.getMenuInflater();
             inflater.inflate(R.menu.setup_server_recycler_item, menu);
 
@@ -450,13 +448,14 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         @Override
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-            mSelectedView.setSelected(true);
+            Log.v(TAG, "onPrepareActionMode: " + mAddress);
+            mRecyclerAdapter.setSelectedItemAddress(mAddress);
             return false;
         }
 
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-
+            Log.v(TAG, "onActionItemClicked: " + mAddress);
             String address = mSocket.getRemoteDevice().getAddress();
 
             switch (item.getItemId()){
@@ -486,7 +485,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
 
         @Override
         public void onDestroyActionMode(ActionMode mode) {
-            mSelectedView.setSelected(false);
+            Log.v(TAG, "onDestroyActionMode: " + mAddress);
+            mRecyclerAdapter.removeSelectedItem();
             mActionMode = null;
             mActionCallback = null;
         }

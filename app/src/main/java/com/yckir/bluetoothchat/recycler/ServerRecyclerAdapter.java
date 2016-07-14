@@ -3,7 +3,9 @@ package com.yckir.bluetoothchat.recycler;
 import android.bluetooth.BluetoothSocket;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,6 +42,8 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
     private ArrayList<BluetoothSocket> mUnaccepted;
     private ServerItemClickListener mListener;
 
+    private String mSelectedItemAddress;
+
 
     /**
      * Constructor that creates a recycler adapter.
@@ -50,6 +54,7 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
         mListener = listener;
         mAccepted = new ArrayList<>(10);
         mUnaccepted = new ArrayList<>(10);
+        mSelectedItemAddress = null;
     }
 
 
@@ -63,6 +68,7 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
 
     @Override
     public void onBindViewHolder(ServerRecyclerAdapter.MyViewHolder holder, int position) {
+        //if the last empty item
         if(position == mAccepted.size() + mUnaccepted.size()) {
             holder.setVisible(false);
             return;
@@ -80,6 +86,12 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
             holder.mAddressTextView.setText(mUnaccepted.get(position).getRemoteDevice().getAddress());
             holder.mStatusImageView.setImageResource(R.drawable.ic_person_outline_black_24dp);
         }
+
+        if(mSelectedItemAddress == null || !mSelectedItemAddress.equals(holder.mAddressTextView.getText()))
+            holder.mExtrasImageView.setSelected(false);
+        else
+            holder.mExtrasImageView.setSelected(true);
+
     }
 
     /**
@@ -134,6 +146,40 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
             default:
                 return new ArrayList<>();
         }
+    }
+
+
+    /**
+     * set an item that is selected and will be highlighted from the other elements. The
+     * mExtrasImageView will be highlighted. notifyDataSetChanged will be called.
+     * @param address the address of the selected view
+     */
+    public void setSelectedItemAddress(@NonNull String address){
+        if(!contains(ALL, address)){
+            Log.w(TAG, address + ": address does not exist for setSelectedItemAddress ");
+            return;
+        }
+        mSelectedItemAddress = address;
+        //cannot get holder to change the property so i am invalidating.
+        notifyDataSetChanged();
+    }
+
+
+    /**
+     * @return the address of the currently selected item.
+     */
+    public @Nullable String getSelectedItemAddress(){
+        return mSelectedItemAddress;
+    }
+
+
+    /**
+     * no item will be selected if this is called. notifyDataSetChanged will be called.
+     */
+    public void removeSelectedItem(){
+        mSelectedItemAddress = null;
+        //cannot get holder to change the property so i am invalidating.
+        notifyDataSetChanged();
     }
 
 
@@ -299,10 +345,9 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
         /**
          * Called when a recycler item is clicked
          *
-         * @param clickedView the view that was clicked
          * @param socket the socket for the clicked view
          */
-        void itemClick(View clickedView, BluetoothSocket socket);
+        void itemClick(BluetoothSocket socket);
     }
 
 
@@ -355,9 +400,9 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
             if(mListener != null){
                 boolean connected = getAdapterPosition() < mAccepted.size();
                 if(connected){
-                    mListener.itemClick(v, mAccepted.get(getAdapterPosition()));
+                    mListener.itemClick(mAccepted.get(getAdapterPosition()));
                 }else{
-                    mListener.itemClick(v, mUnaccepted.get(getAdapterPosition() - mAccepted.size()));
+                    mListener.itemClick(mUnaccepted.get(getAdapterPosition() - mAccepted.size()));
                 }
             }
         }
