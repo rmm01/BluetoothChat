@@ -312,24 +312,21 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
      * @param address the mac address of the bluetooth socket.
      */
     public void removeItem(String address){
-        int i = 0;
         boolean changed = false;
         for(BluetoothSocket socket: mAccepted){
             if(socket.getRemoteDevice().getAddress().equals(address)) {
-                mAccepted.remove(i);
+                mAccepted.remove(socket);
                 changed = true;
                 break;
             }
-            i++;
         }
 
         for(BluetoothSocket socket: mUnaccepted){
             if(socket.getRemoteDevice().getAddress().equals(address)) {
-                mUnaccepted.remove(i);
+                mUnaccepted.remove(socket);
                 changed = true;
                 break;
             }
-            i++;
         }
 
         if(changed)
