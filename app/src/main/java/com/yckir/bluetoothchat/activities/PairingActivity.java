@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.IntDef;
@@ -22,7 +23,6 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -97,7 +97,6 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
     private TextView mMessageText;
     private TextView mActionText1;
     private TextView mActionText2;
-    private Button mCancelConnectionButton;
     private FloatingActionButton mFab;
     private ProgressWheel mMessageWheel;
     private ProgressWheel mConnectionWheel;
@@ -287,7 +286,6 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         mActionText1 = (TextView)findViewById(R.id.status_action1);
         mActionText2 = (TextView)findViewById(R.id.status_action2);
 
-        mCancelConnectionButton = (Button) findViewById(R.id.cancel_button);
         mMessageWheel = (ProgressWheel)findViewById(R.id.message_progress);
         mConnectionWheel = (ProgressWheel)findViewById(R.id.connected_progress);
         mConnectionViewGroup = (ViewGroup) findViewById(R.id.pairing_connection);
@@ -367,7 +365,18 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
     public void cancelConnection(View v){
         //transition connection and changing state will be done in handler
-        mBinder.removeSockets(ServiceUtility.CLOSE_SAY_GOODBYE);
+        if(mClientTask != null) {
+            mClientTask.cancel(true);
+
+            //change the state here since it socket hasn't been added to the service
+            if(mClientTask.getStatus() == AsyncTask.Status.RUNNING) {
+                changeState(FOUND_DEVICES);
+                transitionConnectionVisibility(false);
+            }else
+                mBinder.removeSockets(ServiceUtility.CLOSE_SAY_GOODBYE);
+
+            mClientTask = null;
+        }
     }
 
 
@@ -426,7 +435,6 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         changeState(CONNECTING);
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_bluetooth_name)).setText(device.getName());
         ((TextView)mConnectionViewGroup.findViewById(R.id.connected_mac_address)).setText(device.getAddress());
-        mCancelConnectionButton.setEnabled(false);
         mConnectionWheel.spin();
         transitionConnectionVisibility(true);
 
@@ -446,7 +454,6 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
                 Toast.makeText(PairingActivity.this, "connected to server", Toast.LENGTH_SHORT).show();
                 changeState(CONNECTED);
                 mBinder.addSocket(socket);
-                mCancelConnectionButton.setEnabled(true);
                 return;
             }
             Log.e(TAG, "not connected to read or write service when a server is found");

@@ -53,6 +53,16 @@ public class ClientConnectTask extends AsyncTask<Void, Void, BluetoothSocket>{
     protected void onPostExecute(BluetoothSocket socket) {
         if(socket != null) {
             Log.v(TAG, "socket ready for communication");
+            if(isCancelled()){
+                Log.v(TAG, "connected with " + socket.getRemoteDevice().getAddress() + ", but canceled");
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+
             if(mListener!= null)
                 mListener.serverSearchFinished(true, socket);
         }else {
