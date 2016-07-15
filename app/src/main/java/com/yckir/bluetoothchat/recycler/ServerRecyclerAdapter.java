@@ -1,6 +1,8 @@
 package com.yckir.bluetoothchat.recycler;
 
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.graphics.Typeface;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -41,6 +43,7 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
     private ArrayList<BluetoothSocket> mAccepted;
     private ArrayList<BluetoothSocket> mUnaccepted;
     private ServerItemClickListener mListener;
+    private Context mContext;
 
     private String mSelectedItemAddress;
 
@@ -50,8 +53,9 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
      *
      * @param listener callback listener that will be notified when a recycler item is selected
      */
-    public ServerRecyclerAdapter(@NonNull ServerItemClickListener listener){
+    public ServerRecyclerAdapter(Context context, @NonNull ServerItemClickListener listener){
         mListener = listener;
+        mContext = context;
         mAccepted = new ArrayList<>(10);
         mUnaccepted = new ArrayList<>(10);
         mSelectedItemAddress = null;
@@ -368,6 +372,10 @@ public class ServerRecyclerAdapter extends RecyclerView.Adapter<ServerRecyclerAd
             mAddressTextView = (TextView) view.findViewById(R.id.bluetooth_address);
             mStatusImageView = (ImageView) view.findViewById(R.id.status_icon);
             mExtrasImageView = (ImageView) view.findViewById(R.id.recycler_item_extras);
+
+            Typeface typeface = Typeface.createFromAsset(mContext.getAssets(), "fonts/Roboto-Regular.ttf");
+            mNameTextView.setTypeface(typeface);
+            mAddressTextView.setTypeface(typeface);
 
             mExtrasImageView.setOnClickListener(this);
         }

@@ -130,7 +130,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         mMessageWheel.stopSpinning();
 
         mRecyclerView = (RecyclerView)findViewById(R.id.connected_devices_recycler_view);
-        mRecyclerAdapter = new ServerRecyclerAdapter(this);
+        mRecyclerAdapter = new ServerRecyclerAdapter(this, this);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(mRecyclerAdapter);
 

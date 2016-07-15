@@ -39,6 +39,7 @@
         android:layout_above="@id/center_vertical"
         android:layout_toLeftOf="@id/recycler_item_extras"
         android:layout_toStartOf="@id/recycler_item_extras"
+        android:textColor="@color/primaryText"
         android:textSize="16sp"
         tools:text="bluetooth_name"/>
 
@@ -51,6 +52,7 @@
         android:layout_below="@id/center_vertical"
         android:layout_toLeftOf="@id/recycler_item_extras"
         android:layout_toStartOf="@id/recycler_item_extras"
+        android:textColor="@color/secondaryText"
         android:textSize="14sp"
         tools:text="bluetooth_name"/>
 
