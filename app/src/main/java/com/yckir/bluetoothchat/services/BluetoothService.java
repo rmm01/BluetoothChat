@@ -35,6 +35,10 @@ public class BluetoothService extends Service {
     private BluetoothServiceHandler mClientHandler;
     private TimeoutHandler mTimeoutHandler;
 
+    private String mBluetoothName;
+    private String mMacAddress;
+
+
     /**
      * Handler used to determine if the connected clients are responding to our messages.
      * Sends a hello message to each connected client. The remote client should then respond with
@@ -353,6 +357,19 @@ public class BluetoothService extends Service {
      * Sockets are automatically closed when the services onDestroy is called.
      */
     public class BluetoothBinder extends Binder{
+
+        /**
+         * Set the name and mac address of the local bluetooth device. Default values are
+         * Default 'Name' and 'zz:zz:zz:zz:zz:zz'.
+         *
+         * @param name the name of local bluetooth device.
+         * @param macAddress the mac address of local bluetooth device.
+         */
+        public void setDeviceInfo(String name, String macAddress){
+            mMacAddress = macAddress;
+            mBluetoothName = name;
+        }
+
 
         /**
          * Add a bluetooth socket that has been connected with a remote bluetooth device. A socket

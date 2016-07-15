@@ -358,6 +358,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             mConnected = true;
             mBinder = (BluetoothService.BluetoothBinder ) service;
             mBinder.setHandler(mHandler);
+            mBinder.setDeviceInfo(mBluetoothAdapter.getName(), mBluetoothAdapter.getAddress());
         }
 
         @Override

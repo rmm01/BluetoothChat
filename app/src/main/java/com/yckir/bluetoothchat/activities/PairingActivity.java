@@ -510,6 +510,7 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
             mServiceConnected = true;
             mBinder = (BluetoothService.BluetoothBinder ) service;
             mBinder.setHandler(mHandler);
+            mBinder.setDeviceInfo(mBluetoothAdapter.getName(), mBluetoothAdapter.getAddress());
         }
 
         @Override
