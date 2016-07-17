@@ -39,10 +39,10 @@ public abstract class BluetoothServiceHandler extends Handler {
         int size = msg.arg1;
         String serviceMessage = (String)msg.obj;
 
-        String messageId = (serviceMessage.substring(0, ServiceUtility.ID_LENGTH));
+        String messageId = (serviceMessage.substring(0, ServiceUtility.LENGTH_ID));
         String messageData = null;
-        if(ServiceUtility.ID_LENGTH != size)
-            messageData = serviceMessage.substring(ServiceUtility.ID_LENGTH, size);
+        if(ServiceUtility.LENGTH_ID != size)
+            messageData = serviceMessage.substring(ServiceUtility.LENGTH_ID, size);
 
         switch (messageId){
             case ServiceUtility.ID_APP_MESSAGE:

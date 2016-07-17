@@ -12,7 +12,7 @@ public class ServiceUtility {
     public static final String SDP_NAME = "BluetoothChat";
 
     //number of bytes int the message identifier
-    public static final int ID_LENGTH = 4;
+    public static final int LENGTH_ID = 4;
 
     //max number of bluetooth devices that a server can have communicate with
     public static final int MAX_NUM_BLUETOOTH_DEVICES = 4;

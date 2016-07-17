@@ -134,6 +134,8 @@ public class BluetoothService extends Service {
         mClients = new HashMap<>(ServiceUtility.MAX_NUM_BLUETOOTH_DEVICES);
         mBinder = new BluetoothBinder();
         mTimeoutHandler = new TimeoutHandler(this);
+        mBluetoothName = "Default Name";
+        mMacAddress = "zz:zz:zz:zz:zz:zz";
         mTimeoutHandler.sendMessageDelayed(mTimeoutHandler.obtainMessage(mTimeoutHandler.mTimeoutWhat),TIMEOUT_DURATION);
     }
 
@@ -198,8 +200,8 @@ public class BluetoothService extends Service {
                 return;
             }
 
-            String message_id = (message.substring(0, ServiceUtility.ID_LENGTH));
-            String message_data = (message.substring(ServiceUtility.ID_LENGTH));
+            String message_id = (message.substring(0, ServiceUtility.LENGTH_ID));
+            String message_data = (message.substring(ServiceUtility.LENGTH_ID));
 
             Log.v(TAG, "READ INPUT -" + message +"- "+ mAddress);
 

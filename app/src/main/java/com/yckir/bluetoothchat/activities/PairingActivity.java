@@ -488,11 +488,11 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
 
         @Override
         public void appMessage(String message) {
-            String message_id = (message.substring(0, ServiceUtility.ID_LENGTH));
+            String message_id = (message.substring(0, ServiceUtility.LENGTH_ID));
 
             String messageData = null;
             if(message.length() > ChatroomUtility.ID_LENGTH)
-                messageData = message.substring(ServiceUtility.ID_LENGTH, message.length());
+                messageData = message.substring(ServiceUtility.LENGTH_ID, message.length());
 
             switch (message_id) {
                 default:
