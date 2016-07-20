@@ -39,6 +39,35 @@ public class BT_Message {
 
 
     /**
+     * Reconstructs a bluetooth message object that was converted to string format using makeString().
+     *
+     * @param stringMessage the result of a makeString() call
+     */
+    public static BT_Message reconstruct(String stringMessage){
+        if(stringMessage.length() != BT_MessageUtility.LENGTH_HEADER)
+            throw new IllegalArgumentException(stringMessage + " must be length " + BT_MessageUtility.LENGTH_HEADER);
+
+        @BT_MessageUtility.MESSAGE_TYPE int messageType =  Integer.parseInt(
+                stringMessage.substring(0, BT_MessageUtility.LENGTH_ID));
+
+        checkMessageType(messageType);
+        String address = stringMessage.substring( BT_MessageUtility.LENGTH_ID, BT_MessageUtility.LENGTH_HEADER );
+        return new BT_Message(messageType, address);
+    }
+
+
+    /**
+     * Reconstructs a bluetooth message object that was converted to byte format using the result from
+     * makeBytes().
+     *
+     * @param byteMessage the result of a makeBytes() call.
+     */
+    public static BT_Message reconstruct(byte[] byteMessage){
+        return reconstruct(new String(byteMessage, 0, byteMessage.length));
+    }
+
+
+    /**
      * Constructs a message object from a type and address
      *
      * @param messageType the type of message being created
@@ -50,35 +79,6 @@ public class BT_Message {
 
         mMessageType = messageType;
         mMacAddress = macAddress;
-    }
-
-
-    /**
-     * Reconstructs a bluetooth message object that was converted to string format using makeString().
-     *
-     * @param stringMessage the result of a makeString() call
-     */
-    public BT_Message(String stringMessage){
-        if(stringMessage.length() != BT_MessageUtility.LENGTH_HEADER)
-            throw new IllegalArgumentException(stringMessage + " must be length " + BT_MessageUtility.LENGTH_HEADER);
-
-         @BT_MessageUtility.MESSAGE_TYPE int messageType =  Integer.parseInt(
-                 stringMessage.substring(0, BT_MessageUtility.LENGTH_ID));
-
-        checkMessageType(messageType);
-
-        mMessageType =  messageType;
-        mMacAddress = stringMessage.substring( BT_MessageUtility.LENGTH_ID, BT_MessageUtility.LENGTH_HEADER );
-    }
-
-
-    /**
-     * Reconstructs a bluetooth message object that was converted to byte format using makeBytes().
-     *
-     * @param byteMessage the result of a makeBytes() call.
-     */
-    public BT_Message(byte[] byteMessage){
-        this(new String(byteMessage, 0, byteMessage.length));
     }
 
 
@@ -96,7 +96,7 @@ public class BT_Message {
 
     /**
      * Converts the current message object into string form. The object can be reconstructed using
-     * this string by calling BT_MESSAGE(String) constructor.
+     * this string by calling reconstruct(String).
      *
      * @return the current message object into string form.
      */
@@ -107,7 +107,7 @@ public class BT_Message {
 
     /**
      * Converts the current message object into byte form. The object can be reconstructed using
-     * this string by calling BT_MESSAGE(byte[]) constructor.
+     * this string by calling reconstruct(byte[]).
      *
      * @return the current message object into byte form.
      */

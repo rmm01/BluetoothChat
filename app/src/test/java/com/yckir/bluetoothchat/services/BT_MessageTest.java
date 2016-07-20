@@ -47,73 +47,7 @@ public class BT_MessageTest {
 
     }
 
-    //standard constructor
-
-    @Test
-    public void testConstructorString(){
-        BT_Message m;
-        m = new BT_Message(type1 + address1);
-
-        assertEquals(m.getMessageType(), mMessage1.getMessageType());
-        assertEquals(m.getMacAddress(), mMessage1.getMacAddress());
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructorStringInvalidSmall(){
-        String s = "0";
-        mMessage1 = new BT_Message(s);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructorStingInvalidLarge(){
-        String s = "02345678901234567890";
-        mMessage1 = new BT_Message(s);
-    }
-
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructorStingInvalidType(){
-        assertTrue( !BT_MessageUtility.isMessageType( 9999 ) );
-
-        String s = "9999" + address1;
-        mMessage1 = new BT_Message(s);
-    }
-
-    //byte constructor
-
-    @Test
-    public void testConstructorBytes(){
-
-        BT_Message m;
-        m = new BT_Message((type1 + address1).getBytes());
-
-        assertEquals(m.getMessageType(), mMessage1.getMessageType());
-        assertEquals(m.getMacAddress(), mMessage1.getMacAddress());
-
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructorBytesInvalidSmall(){
-        byte[] b = "0".getBytes();
-        mMessage1 = new BT_Message(b);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructorBytesInvalidType(){
-        assertTrue( !BT_MessageUtility.isMessageType( 9999 ) );
-
-        byte[] b = ("9999" + address1).getBytes();
-        mMessage1 = new BT_Message(b);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructorBytesInvalidLarge(){
-        byte[] b = "02345678901234567890".getBytes();
-        mMessage1 = new BT_Message(b);
-    }
-
-
-    // string constructor
+    // constructor
 
     @Test(expected = IllegalArgumentException.class)
     public void testConstructor2pInvalidType(){
@@ -134,6 +68,70 @@ public class BT_MessageTest {
         mMessage1 = new BT_Message(BT_MessageUtility.TYPE_HELLO, "01234567890123456789");
     }
 
+
+    //string reconstruct
+
+    @Test
+    public void testReconstructString(){
+        BT_Message m = BT_Message.reconstruct(type1 + address1);
+
+        assertEquals(m.getMessageType(), mMessage1.getMessageType());
+        assertEquals(m.getMacAddress(), mMessage1.getMacAddress());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testReconstructStringInvalidSmall(){
+        String s = "0";
+        mMessage1 = BT_Message.reconstruct(s);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testReconstructStringInvalidLarge(){
+        String s = "02345678901234567890";
+        mMessage1 = BT_Message.reconstruct(s);
+    }
+
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testReconstructStringInvalidType(){
+        assertTrue( !BT_MessageUtility.isMessageType( 9999 ) );
+
+        String s = "9999" + address1;
+        mMessage1 = BT_Message.reconstruct(s);
+    }
+
+    //byte reconstruct
+
+    @Test
+    public void testReconstructBytes(){
+
+        BT_Message m;
+        m = BT_Message.reconstruct((type1 + address1).getBytes());
+
+        assertEquals(m.getMessageType(), mMessage1.getMessageType());
+        assertEquals(m.getMacAddress(), mMessage1.getMacAddress());
+
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testReconstructBytesInvalidSmall(){
+        byte[] b = "0".getBytes();
+        mMessage1 = BT_Message.reconstruct(b);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testReconstructBytesInvalidType(){
+        assertTrue( !BT_MessageUtility.isMessageType( 9999 ) );
+
+        byte[] b = ("9999" + address1).getBytes();
+        mMessage1 = BT_Message.reconstruct(b);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testReconstructBytesInvalidLarge(){
+        byte[] b = "02345678901234567890".getBytes();
+        mMessage1 = BT_Message.reconstruct(b);
+    }
 
 
     @Test
@@ -170,23 +168,23 @@ public class BT_MessageTest {
         String original, created;
 
         original = mMessage1.makeString();
-        created = new BT_Message( original ).makeString();
+        created = BT_Message.reconstruct(original).makeString();
         assertEquals( original, created );
 
         original = mMessage2.makeString();
-        created = new BT_Message( original ).makeString();
+        created = BT_Message.reconstruct(original).makeString();
         assertEquals( original, created );
 
         original = mMessage3.makeString();
-        created = new BT_Message( original ).makeString();
+        created = BT_Message.reconstruct(original).makeString();
         assertEquals( original, created );
 
         original = mMessage4.makeString();
-        created = new BT_Message( original ).makeString();
+        created = BT_Message.reconstruct(original).makeString();
         assertEquals( original, created );
 
         original = mMessage5.makeString();
-        created = new BT_Message( original ).makeString();
+        created = BT_Message.reconstruct(original).makeString();
         assertEquals( original, created );
     }
 
@@ -197,23 +195,23 @@ public class BT_MessageTest {
         byte[] original, created;
 
         original = mMessage1.makeBytes();
-        created = new BT_Message(original).makeBytes();
+        created = BT_Message.reconstruct(original).makeBytes();
         assertTrue( Arrays.equals( original, created ) );
 
         original = mMessage2.makeBytes();
-        created = new BT_Message(original).makeBytes();
+        created = BT_Message.reconstruct(original).makeBytes();
         assertTrue( Arrays.equals( original, created ) );
 
         original = mMessage3.makeBytes();
-        created = new BT_Message(original).makeBytes();
+        created = BT_Message.reconstruct(original).makeBytes();
         assertTrue( Arrays.equals( original, created ) );
 
         original = mMessage4.makeBytes();
-        created = new BT_Message(original).makeBytes();
+        created = BT_Message.reconstruct(original).makeBytes();
         assertTrue( Arrays.equals( original, created ) );
 
         original = mMessage5.makeBytes();
-        created = new BT_Message(original).makeBytes();
+        created = BT_Message.reconstruct(original).makeBytes();
         assertTrue( Arrays.equals( original, created ) );
     }
 
