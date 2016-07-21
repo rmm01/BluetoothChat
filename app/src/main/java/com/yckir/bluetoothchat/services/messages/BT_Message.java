@@ -2,6 +2,8 @@ package com.yckir.bluetoothchat.services.messages;
 
 import android.support.annotation.NonNull;
 
+import java.util.Arrays;
+
 /**
  * A bluetooth message object that is used to store and convert data that will be sent
  * to through bluetooth sockets. This object will always be at the start of a message. The type is
@@ -56,6 +58,26 @@ public class BT_Message {
         checkMessageType(messageType);
         String address = stringMessage.substring( BT_MessageUtility.LENGTH_ID, BT_MessageUtility.LENGTH_HEADER );
         return new BT_Message(messageType, address);
+    }
+
+
+    /**
+     * Determines if the first 4 bytes of the parameter can be transformed into a valid MESSAGE_TYPE.
+     * If it is valid, then type is returned. If not, -1 is returned.
+     * IllegalArgumentException thrown if length is less than BT_MessageUtility.LENGTH_ID.
+     *
+     * @param b the byte array that will have its first bytes bytes checked
+     * @return the message type in the array, -1 if it was an invalid type.
+     */
+    public static @BT_MessageUtility.MESSAGE_TYPE int getType(@NonNull byte[] b){
+        if(b.length < BT_MessageUtility.LENGTH_ID)
+            throw new IllegalArgumentException(b + " must be larger than " + BT_MessageUtility.LENGTH_ID);
+
+        String id = new String( Arrays.copyOfRange(b,0,4) );
+        @BT_MessageUtility.MESSAGE_TYPE int type = Integer.parseInt(id);
+        if( !BT_MessageUtility.isMessageType(type) )
+            return -1;
+        return type;
     }
 
 

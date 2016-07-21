@@ -102,6 +102,40 @@ public class BT_MessageTest {
         mMessage1 = BT_Message.reconstruct(b);
     }
 
+    @Test
+    public void testGetType(){
+        byte[] b;
+
+        b = (type1 + "").getBytes();
+        assertNotEquals(-1, BT_Message.getType(b));
+        b = (type2 + "").getBytes();
+        assertNotEquals(-1, BT_Message.getType(b));
+        b = (type3 + "").getBytes();
+        assertNotEquals(-1, BT_Message.getType(b));
+        b = (type4 + "").getBytes();
+        assertNotEquals(-1, BT_Message.getType(b));
+        b = (type5 + "").getBytes();
+        assertNotEquals(-1, BT_Message.getType(b));
+    }
+
+    @Test
+    public void testGetTypeLarge(){
+        byte[] b = (type1 + "asd").getBytes();
+        assertNotEquals(-1,  BT_Message.getType(b));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testGetTypeInvalidSmall(){
+        byte[] b = "111".getBytes();
+        BT_Message.getType(b);
+    }
+
+    @Test
+    public void testGetTypeInvalidType(){
+        assertTrue( !BT_MessageUtility.isMessageType(5000) );
+        byte[] b = "5000".getBytes();
+        assertEquals(-1, BT_Message.getType(b));
+    }
 
     @Test
     public void testGetMacAddress(){
