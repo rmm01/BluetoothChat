@@ -1,4 +1,4 @@
-package com.yckir.bluetoothchat.services;
+package com.yckir.bluetoothchat.services.messages;
 
 import com.yckir.bluetoothchat.services.messages.BT_Message;
 import com.yckir.bluetoothchat.services.messages.BT_MessageUtility;
