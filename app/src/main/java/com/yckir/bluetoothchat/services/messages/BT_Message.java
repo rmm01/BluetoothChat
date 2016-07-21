@@ -39,13 +39,16 @@ public class BT_Message {
 
 
     /**
-     * Reconstructs a bluetooth message object that was converted to string format using makeString().
+     * Reconstructs a bluetooth message object that was converted to byte format using the result from
+     * makeBytes().
      *
-     * @param stringMessage the result of a makeString() call
+     * @param byteMessage the result of a makeBytes() call.
      */
-    public static BT_Message reconstruct(String stringMessage){
-        if(stringMessage.length() != BT_MessageUtility.LENGTH_HEADER)
-            throw new IllegalArgumentException(stringMessage + " must be length " + BT_MessageUtility.LENGTH_HEADER);
+    public static BT_Message reconstruct(byte[] byteMessage){
+        if(byteMessage.length != BT_MessageUtility.LENGTH_HEADER)
+            throw new IllegalArgumentException(byteMessage + " must be length " + BT_MessageUtility.LENGTH_HEADER);
+
+        String stringMessage = (new String(byteMessage, 0, byteMessage.length));
 
         @BT_MessageUtility.MESSAGE_TYPE int messageType =  Integer.parseInt(
                 stringMessage.substring(0, BT_MessageUtility.LENGTH_ID));
@@ -53,17 +56,6 @@ public class BT_Message {
         checkMessageType(messageType);
         String address = stringMessage.substring( BT_MessageUtility.LENGTH_ID, BT_MessageUtility.LENGTH_HEADER );
         return new BT_Message(messageType, address);
-    }
-
-
-    /**
-     * Reconstructs a bluetooth message object that was converted to byte format using the result from
-     * makeBytes().
-     *
-     * @param byteMessage the result of a makeBytes() call.
-     */
-    public static BT_Message reconstruct(byte[] byteMessage){
-        return reconstruct(new String(byteMessage, 0, byteMessage.length));
     }
 
 
@@ -95,23 +87,12 @@ public class BT_Message {
 
 
     /**
-     * Converts the current message object into string form. The object can be reconstructed using
-     * this string by calling reconstruct(String).
-     *
-     * @return the current message object into string form.
-     */
-    public String makeString(){
-        return mMessageType + mMacAddress;
-    }
-
-
-    /**
      * Converts the current message object into byte form. The object can be reconstructed using
      * this string by calling reconstruct(byte[]).
      *
      * @return the current message object into byte form.
      */
     public byte[] makeBytes(){
-        return makeString().getBytes();
+        return ( mMessageType + mMacAddress).getBytes();
     }
 }

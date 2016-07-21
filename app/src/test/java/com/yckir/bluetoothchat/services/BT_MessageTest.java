@@ -69,37 +69,6 @@ public class BT_MessageTest {
     }
 
 
-    //string reconstruct
-
-    @Test
-    public void testReconstructString(){
-        BT_Message m = BT_Message.reconstruct(type1 + address1);
-
-        assertEquals(m.getMessageType(), mMessage1.getMessageType());
-        assertEquals(m.getMacAddress(), mMessage1.getMacAddress());
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testReconstructStringInvalidSmall(){
-        String s = "0";
-        mMessage1 = BT_Message.reconstruct(s);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testReconstructStringInvalidLarge(){
-        String s = "02345678901234567890";
-        mMessage1 = BT_Message.reconstruct(s);
-    }
-
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testReconstructStringInvalidType(){
-        assertTrue( !BT_MessageUtility.isMessageType( 9999 ) );
-
-        String s = "9999" + address1;
-        mMessage1 = BT_Message.reconstruct(s);
-    }
-
     //byte reconstruct
 
     @Test
@@ -152,41 +121,6 @@ public class BT_MessageTest {
         assertEquals(mMessage5.getMacAddress(), address5);
     }
 
-    @Test
-    public void testMakeString1(){
-        assertEquals(mMessage1.makeString(), type1 + address1);
-        assertEquals(mMessage2.makeString(), type2 + address2);
-        assertEquals(mMessage3.makeString(), type3 + address3);
-        assertEquals(mMessage4.makeString(), type4 + address4);
-        assertEquals(mMessage5.makeString(), type5 + address5);
-    }
-
-    @Test
-    public void testMakeString2(){
-        //checks if class -> string -> class creates same object
-
-        String original, created;
-
-        original = mMessage1.makeString();
-        created = BT_Message.reconstruct(original).makeString();
-        assertEquals( original, created );
-
-        original = mMessage2.makeString();
-        created = BT_Message.reconstruct(original).makeString();
-        assertEquals( original, created );
-
-        original = mMessage3.makeString();
-        created = BT_Message.reconstruct(original).makeString();
-        assertEquals( original, created );
-
-        original = mMessage4.makeString();
-        created = BT_Message.reconstruct(original).makeString();
-        assertEquals( original, created );
-
-        original = mMessage5.makeString();
-        created = BT_Message.reconstruct(original).makeString();
-        assertEquals( original, created );
-    }
 
     @Test
     public void testMakeBytes(){

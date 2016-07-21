@@ -13,6 +13,7 @@ public class ServiceUtility {
 
     //number of bytes int the message identifier
     public static final int LENGTH_ID = 4;
+    public static final int LENGTH_CLOSE_CODE = 3;
 
     //max number of bluetooth devices that a server can have communicate with
     public static final int MAX_NUM_BLUETOOTH_DEVICES = 4;
@@ -39,6 +40,30 @@ public class ServiceUtility {
     public static final String ID_CONNECTION_CLOSED        = "1100";
     public static final String ID_SERVER_SETUP_FINISHED    = "1101";
     public static final String ID_APP_MESSAGE              = "1102";
+
+
+    /**
+     * checks if the parameter is a valid close code. Necessary because
+     * an int parsed from a byte array can not be safely cast to
+     * CLOSE_CODE.
+     *
+     * @param code the code to be checked.
+     * @return true if is a valid close code, false otherwise.
+     */
+    public static boolean isCloseCode(int code){
+        switch (code) {
+            case CLOSE_GET_GOODBYE:
+            case CLOSE_KICKED_FROM_SERVER:
+            case CLOSE_READ_CLOSE:
+            case CLOSE_SAY_GOODBYE:
+            case CLOSE_SERVER_NOT_RESPONDING:
+            case CLOSE_SERVICE_DESTROYED:
+            case CLOSE_WRITE_CLOSE:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     /**
      * @param closeCode id for why connection is being closed
