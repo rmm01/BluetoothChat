@@ -5,6 +5,13 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.yckir.bluetoothchat.services.messages.BT_Message;
+import com.yckir.bluetoothchat.services.messages.BT_MessageApp;
+import com.yckir.bluetoothchat.services.messages.BT_MessageClose;
+import com.yckir.bluetoothchat.services.messages.BT_MessageHello;
+import com.yckir.bluetoothchat.services.messages.BT_MessageHelloReply;
+import com.yckir.bluetoothchat.services.messages.BT_MessageUtility;
+
 /**
  * Handler that listens to messages from BluetoothService. The abstract methods will be called
  * from the default handleMessage method. HandleMessage should not be extended, implement the
@@ -12,7 +19,6 @@ import android.util.Log;
  */
 public abstract class BluetoothServiceHandler extends Handler {
     public static final String TAG = "BluetoothServiceHandler";
-    public static final String EXTRA_MAC_ADDRESS = "BluetoothServiceHandler:EXTRA_MAC_ADDRESS";
 
     /**
      * Called when a connection has closed.
@@ -24,9 +30,10 @@ public abstract class BluetoothServiceHandler extends Handler {
     /**
      * message that was sent form a remote bluetooth device and should be parsed by the activity.
      *
-     * @param message message from remote bluetooth device.
+     * @param macAddress address of the remote bluetooth device that sent the message
+     * @param bytes data that was sent by remote bluetooth device
      */
-    public abstract void appMessage(String message);
+    public abstract void appMessage(String macAddress, byte[] bytes);
 
     /**
      * Tells client that the server has finished setting up and it can
@@ -34,30 +41,43 @@ public abstract class BluetoothServiceHandler extends Handler {
      */
     public abstract void serverSetupFinished();
 
-    @Override
-    public final void handleMessage(Message msg) {
-        int size = msg.arg1;
-        String serviceMessage = (String)msg.obj;
+    public final void handleMessage(Message msg){
+        //The service filters out illegal BT_Message objects so
+        //it error checking is not required.
+        int type = BT_Message.getType( ((BT_Message) msg.obj).makeBytes() );
 
-        String messageId = (serviceMessage.substring(0, ServiceUtility.LENGTH_ID));
-        String messageData = null;
-        if(ServiceUtility.LENGTH_ID != size)
-            messageData = serviceMessage.substring(ServiceUtility.LENGTH_ID, size);
-
-        switch (messageId){
-            case ServiceUtility.ID_APP_MESSAGE:
-                appMessage(messageData);
+        switch (type) {
+            case BT_MessageUtility.TYPE_APP_MESSAGE :
+                BT_MessageApp m = (BT_MessageApp)msg.obj;
+                appMessage(m.getMacAddress(), (m.getData()));
                 break;
-            case ServiceUtility.ID_SERVER_SETUP_FINISHED:
+
+            case BT_MessageUtility.TYPE_SERVER_SETUP_FINISHED:
                 serverSetupFinished();
                 break;
-            case ServiceUtility.ID_CONNECTION_CLOSED:
-                @ServiceUtility.CLOSE_CODE int closeCode =  Integer.parseInt( messageData);
-                connectionClosed(msg.getData().getString(EXTRA_MAC_ADDRESS), closeCode);
+
+            case BT_MessageUtility.TYPE_CONNECTION_CLOSED:
+                BT_MessageClose m1 = (BT_MessageClose)msg.obj ;
+                connectionClosed(m1.getMacAddress(), m1.getCloseCode());
                 break;
+
+            case BT_MessageUtility.TYPE_HELLO:
+                //hello messages should have been handled by service and should not have been passed
+                //to handler
+                BT_MessageHello m2 = (BT_MessageHello)msg.obj ;
+                Log.w(TAG, "should not have received message " + new String(m2.makeBytes()));
+                break;
+
+            case BT_MessageUtility.TYPE_HELLO_REPLY:
+                //hello messages should have been handled by service and should not have been passed
+                //to handler
+                BT_MessageHelloReply m3 = (BT_MessageHelloReply) msg.obj ;
+                Log.w(TAG, "should not have received message " + new String(m3.makeBytes()));
+                break;
+
             default:
-                Log.v(TAG, " unknown service message id " + messageId + ", with message " + messageData);
-                break;
+                Log.w(TAG, "unknown type " + type);
+
         }
     }
 }

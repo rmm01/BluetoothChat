@@ -1,17 +1,25 @@
 package com.yckir.bluetoothchat.services;
 
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
+
+import com.yckir.bluetoothchat.services.messages.BT_Message;
+import com.yckir.bluetoothchat.services.messages.BT_MessageApp;
+import com.yckir.bluetoothchat.services.messages.BT_MessageClose;
+import com.yckir.bluetoothchat.services.messages.BT_MessageHello;
+import com.yckir.bluetoothchat.services.messages.BT_MessageHelloReply;
+import com.yckir.bluetoothchat.services.messages.BT_MessageSetupFinished;
+import com.yckir.bluetoothchat.services.messages.BT_MessageUtility;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,8 +43,8 @@ public class BluetoothService extends Service {
     private BluetoothServiceHandler mClientHandler;
     private TimeoutHandler mTimeoutHandler;
 
-    private String mBluetoothName;
-    private String mMacAddress;
+    private String mMyBluetoothName;
+    private String mMyAddress;
 
 
     /**
@@ -68,7 +76,7 @@ public class BluetoothService extends Service {
                     info.connectionAttempts++;
                     if(info.connectionAttempts >1)
                         Log.v(TAG, "connection attempt " + info.connectionAttempts + ": " + info.device.getAddress());
-                    mService.get().mBinder.writeMessage(ServiceUtility.makeHelloMessage(), info.device.getAddress());
+                    mService.get().sendMessage(new BT_MessageHello(mService.get().mMyAddress),info.device.getAddress());
                 }
             }
             Message m = obtainMessage(mTimeoutWhat);
@@ -81,7 +89,6 @@ public class BluetoothService extends Service {
      * specified info.
      *
      * @param info info and data about the bluetooth connection
-
      */
     private void enableRW(@NonNull BluetoothConnectionInfo info){
         Log.v(TAG, "enableRW for " + info.device.getAddress());
@@ -114,7 +121,7 @@ public class BluetoothService extends Service {
             Log.v(TAG,"not currently writing");
         }else{
             Log.v(TAG,"disable writing");
-            info.blockingQueue.offer(WriteThread.SHUTDOWN_KEY);
+            info.blockingQueue.offer(new BT_MessageApp(WriteThread.SHUTDOWN_KEY, null));
         }
 
         if(info.readThread == null || !info.readThread.isAlive()){
@@ -127,6 +134,30 @@ public class BluetoothService extends Service {
         info.writeThread = null;
     }
 
+    /**
+     * Sends a message to the remote bluetooth device.
+     *
+     * @param message the message to be sent
+     * @param macAddress the mac address to send to
+     * @return true if the message was sent, false if it could not.
+     */
+    private boolean sendMessage(BT_Message message, String macAddress){
+        String msg = new String(message.makeBytes());
+        Log.v(TAG, "WRITE APP MESSAGE -"+ msg +"- to " + macAddress);
+
+        if( !mClients.containsKey(macAddress) )
+            return false;
+
+        BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
+
+        if(tmpInfo == null || tmpInfo.socket == null)
+            return false;
+
+        if(!tmpInfo.blockingQueue.offer(message))
+            Log.v(TAG, "blocking queue is full, cannot put message " + msg);
+        return true;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -134,8 +165,11 @@ public class BluetoothService extends Service {
         mClients = new HashMap<>(ServiceUtility.MAX_NUM_BLUETOOTH_DEVICES);
         mBinder = new BluetoothBinder();
         mTimeoutHandler = new TimeoutHandler(this);
-        mBluetoothName = "Default Name";
-        mMacAddress = "zz:zz:zz:zz:zz:zz";
+        mMyBluetoothName = "Default Name";
+        mMyAddress = "zz:zz:zz:zz:zz:zz";
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        mMyBluetoothName = adapter.getName();
+        mMyAddress = adapter.getAddress();
         mTimeoutHandler.sendMessageDelayed(mTimeoutHandler.obtainMessage(mTimeoutHandler.mTimeoutWhat),TIMEOUT_DURATION);
     }
 
@@ -187,57 +221,73 @@ public class BluetoothService extends Service {
         }
 
         /**
-         * Parses the buffer into the ID and data. The resulting action depends on the id.
-         * Default will send the message to client handler. Hello messages are handled here.
+         * Attempts to create a BT_Message object form buffer. The service either handles the message or
+         * passes it down to the mClientHandler depending on the type of message.
          *
          * @param numBytes size of message
          * @param buffer the message that was read
          */
         private void parseMessage(int numBytes, byte[] buffer){
+            //check if buffer is as long as the id
+            //attempt to extract the type from the buffer,
+            //based on the type, perform appropriate action
+
             String message = new String(buffer, 0, numBytes);
-            if(numBytes < 4) {
-                Log.v(TAG, "Got a message with size less than the length of a service id: " + message);
+            Log.v(TAG, "Read message " + message + " from " + mAddress);
+            if(numBytes < BT_MessageUtility.LENGTH_ID) {
+                Log.w(TAG, "Got a message with size less than the length of a service id: " + message);
                 return;
             }
 
-            String message_id = (message.substring(0, ServiceUtility.LENGTH_ID));
-            String message_data = (message.substring(ServiceUtility.LENGTH_ID));
+            if(mClientHandler == null) {
+                Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + message);
+                return;
+            }
 
-            Log.v(TAG, "READ INPUT -" + message +"- "+ mAddress);
+            Message msg;
+            int type = BT_Message.getType(buffer);
 
-            switch (message_id){
-                case ServiceUtility.ID_HELLO:
-                    mBinder.writeMessage(ServiceUtility.makeReplyHelloMessage());
+            switch (type) {
+                case BT_MessageUtility.TYPE_HELLO:
+                    //always reply to hellos
+                    sendMessage(new BT_MessageHelloReply(mMyAddress), mAddress);
                     break;
 
-                case ServiceUtility.ID_HELLO_REPLY:
+                case BT_MessageUtility.TYPE_HELLO_REPLY:
+                    //reset the timeout counter since we got a reply
                     BluetoothConnectionInfo info = mClients.get(mAddress);
                     if(info != null)
                         info.connectionAttempts = 0;
                     break;
-                case ServiceUtility.ID_CONNECTION_CLOSED:
+
+                case BT_MessageUtility.TYPE_CONNECTION_CLOSED:
                     //only kicked and goodbye close messages are sent over bluetooth, the
                     //other close messages are errors that force the connection to close immediately.
-                    @ServiceUtility.CLOSE_CODE int closeCode =  Integer.parseInt( message_data);
-                    if(closeCode == ServiceUtility.CLOSE_KICKED_FROM_SERVER)
-                        mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_KICKED_FROM_SERVER);
-                    else if(closeCode == ServiceUtility.CLOSE_SAY_GOODBYE){
-                        mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_GET_GOODBYE);
-                    }else
-                        Log.w(TAG, "Read invalid close code " + closeCode);
-                    break;
-                case ServiceUtility.ID_SERVER_SETUP_FINISHED:
-                case ServiceUtility.ID_APP_MESSAGE:
-                    if(mClientHandler == null) {
-                        Log.e(TAG, "NO HANDLER, LOSING MESSAGE: " + message);
-                        break;
-                    }
-                    Message m = mClientHandler.obtainMessage(0, numBytes, -1, message);
-                    mClientHandler.sendMessage(m);
+                    BT_MessageClose m_c = BT_MessageClose.reconstruct(message.getBytes());
+
+                    if(m_c.getCloseCode() == ServiceUtility.CLOSE_KICKED_FROM_SERVER
+                            || m_c.getCloseCode() == ServiceUtility.CLOSE_SAY_GOODBYE )
+                        mBinder.removeSocket(m_c.getMacAddress(), m_c.getCloseCode());
+                    else
+                        Log.w(TAG, "Read close code that should not have been sent " + m_c.getCloseCode());
                     break;
 
+                case BT_MessageUtility.TYPE_SERVER_SETUP_FINISHED:
+                    BT_MessageSetupFinished m_s = BT_MessageSetupFinished.reconstruct(message.getBytes());
+
+                    msg = mClientHandler.obtainMessage(0, 0, 0, m_s);
+                    mClientHandler.sendMessage(msg);
+                    break;
+
+                case BT_MessageUtility.TYPE_APP_MESSAGE:
+
+                    BT_MessageApp m_a = BT_MessageApp.reconstruct(message.getBytes());
+
+                    msg = mClientHandler.obtainMessage(0, 0, 0, m_a);
+                    mClientHandler.sendMessage(msg);
+                    break;
                 default:
-                    Log.v(TAG, "Unknown message id: " + message_id);
+                    Log.v(TAG, "Unknown message id: " + message);
             }
         }
 
@@ -271,11 +321,11 @@ public class BluetoothService extends Service {
     private class WriteThread extends Thread{
         private final String mAddress;
         private OutputStream mOutputStream;
-        private ArrayBlockingQueue<String> mQueue;
+        private ArrayBlockingQueue<BT_Message> mQueue;
         /**
          * when the thread receives this message from the queue, the thread will close.
          */
-        private static final String SHUTDOWN_KEY = "poliknbybdkfnammchyjmdnyukkdujmnyiyrtffsedrae";
+        private static final String SHUTDOWN_KEY = "xx:xx:xx:xx:xx:xx";
 
         /**
          * Creates a thread that writes input using a stream. Communicate to this thread by giving it
@@ -285,26 +335,31 @@ public class BluetoothService extends Service {
          * @param outputStream output stream of a bluetooth socket
          * @param queue a queue that will be given messages to be sent using output stream..
          */
-        public WriteThread(String address, OutputStream outputStream, ArrayBlockingQueue<String> queue){
+        public WriteThread(String address, OutputStream outputStream, ArrayBlockingQueue<BT_Message> queue){
             mAddress = address;
             mOutputStream = outputStream;
             mQueue = queue;
         }
 
+        public boolean shutdown(BT_Message message){
+            return message.getMessageType() == BT_MessageUtility.TYPE_APP_MESSAGE &&
+                    new String(((BT_MessageApp) message).getData()).equals(SHUTDOWN_KEY);
+        }
+
         @Override
         public void run() {
             Log.v(TAG, "START WRITING: " + mAddress);
-            String data = "";
+            BT_Message message ;
             byte[] bytes;
             while ( !isInterrupted() ){
                 try{
-                    data = mQueue.take();
-                    if(data.equals( SHUTDOWN_KEY )) {
+                    message = mQueue.take();
+                    if( shutdown(message) ){
                         Log.v(TAG, "SHUTDOWN KEY RECEIVED: " + mAddress);
                         mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
                         return;
                     }
-                    bytes = data.getBytes();
+                    bytes = message.makeBytes();
                     mOutputStream.write(bytes);
                 }catch (InterruptedException e){
                     Log.v(TAG, "WRITE QUEUE EXCEPTION  " + mAddress);
@@ -312,7 +367,7 @@ public class BluetoothService extends Service {
                     mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
                     return;
                 } catch (IOException e) {
-                    Log.v(TAG, "WRITE EXCEPTION, MESSAGE : " + data + ", ADDRESS " + mAddress);
+                    Log.v(TAG, "WRITE EXCEPTION, " + mAddress);
                     e.printStackTrace();
                     mBinder.removeSocket(mAddress, ServiceUtility.CLOSE_WRITE_CLOSE);
                     return;
@@ -344,7 +399,7 @@ public class BluetoothService extends Service {
         /**
          * used to give writing thread data.
          */
-        ArrayBlockingQueue<String> blockingQueue;
+        ArrayBlockingQueue<BT_Message> blockingQueue;
     }
 
     /**
@@ -359,19 +414,6 @@ public class BluetoothService extends Service {
      * Sockets are automatically closed when the services onDestroy is called.
      */
     public class BluetoothBinder extends Binder{
-
-        /**
-         * Set the name and mac address of the local bluetooth device. Default values are
-         * Default 'Name' and 'zz:zz:zz:zz:zz:zz'.
-         *
-         * @param name the name of local bluetooth device.
-         * @param macAddress the mac address of local bluetooth device.
-         */
-        public void setDeviceInfo(String name, String macAddress){
-            mMacAddress = macAddress;
-            mBluetoothName = name;
-        }
-
 
         /**
          * Add a bluetooth socket that has been connected with a remote bluetooth device. A socket
@@ -454,6 +496,9 @@ public class BluetoothService extends Service {
          * @param closeCode id that identifies why the socket is being closed
          */
         public void removeSocket(String macAddress, @ServiceUtility.CLOSE_CODE int closeCode){
+
+            BT_MessageClose closeMessage = new BT_MessageClose(mMyAddress, closeCode);
+
             BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
 
             //if cant find connection or already deleting, return
@@ -465,7 +510,7 @@ public class BluetoothService extends Service {
 
             if(closeCode == ServiceUtility.CLOSE_KICKED_FROM_SERVER ||
                     closeCode == ServiceUtility.CLOSE_SAY_GOODBYE){
-                writeMessage(ServiceUtility.makeCloseMessage(closeCode), macAddress);
+                sendMessage(closeMessage, macAddress);
             }
 
             disableRW(tmpInfo);
@@ -497,53 +542,46 @@ public class BluetoothService extends Service {
 
             //Send message to handler
             if(mClientHandler != null){
-                String message = ServiceUtility.makeCloseMessage(closeCode);
-
-                Message m = mClientHandler.obtainMessage(0, message.length(), -1, message);
-                Bundle data = new Bundle(1);
-                data.putString(BluetoothServiceHandler.EXTRA_MAC_ADDRESS, macAddress);
-                m.setData(data);
+                Message m = mClientHandler.obtainMessage(0, 0, 0, closeMessage);
                 mClientHandler.sendMessage(m);
             }
         }
 
 
         /**
-         * Write a message to all bluetooth sockets that are enabled. The message should always come
-         * from one of the ServiceUtility.make methods.
+         * Write a message to all bluetooth sockets that are enabled.
          *
-         * @param message message to be sent
+         * @param data message to be sent
          */
-        public void writeMessage(String message){
+        public void writeMessage(byte[] data){
             for(BluetoothConnectionInfo tmpInfo: mClients.values()){
-                writeMessage(message, tmpInfo.device.getAddress());
+                writeMessage(data, tmpInfo.device.getAddress());
             }
         }
 
 
         /**
          * write a message to the specified bluetooth device with the specified mac address.The mac
-         * address ia available using BluetoothSocket.getRemoteDevice().getAddress(). The message
-         * should always come from one of the ServiceUtility.make methods.
+         * address ia available using BluetoothSocket.getRemoteDevice().getAddress().
          *
-         * @param message message to be sent
+         * @param data data to be sent
          * @param macAddress mac address of the bluetooth device that will have the message sent to
          * @return false if mac address doesn't exist for an added socket.
          */
-        public boolean writeMessage(String message, String macAddress){
-            Log.v(TAG, "WRITE MESSAGE -"+ message +"- to " + macAddress);
+        public boolean writeMessage(byte[] data, String macAddress){
+            BT_MessageApp m = new BT_MessageApp(mMyAddress, data);
+            return sendMessage(m,macAddress);
+        }
 
-            if( !mClients.containsKey(macAddress) )
-                return false;
 
-            BluetoothConnectionInfo tmpInfo = mClients.get(macAddress);
-
-            if(tmpInfo == null || tmpInfo.socket == null)
-                return false;
-
-            if(!tmpInfo.blockingQueue.offer(message))
-                Log.v(TAG, "blocking queue is full, cannot put message " + message);
-            return true;
+        /**
+         * The server calls this method to have clients know that the server is finished
+         * setting up and that they have been accepted.
+         */
+        public void serverReady(){
+            for(BluetoothConnectionInfo tmpInfo: mClients.values()){
+                sendMessage(new BT_MessageSetupFinished(mMyAddress), tmpInfo.device.getAddress());
+            }
         }
 
 

@@ -358,7 +358,6 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             mConnected = true;
             mBinder = (BluetoothService.BluetoothBinder ) service;
             mBinder.setHandler(mHandler);
-            mBinder.setDeviceInfo(mBluetoothAdapter.getName(), mBluetoothAdapter.getAddress());
         }
 
         @Override
@@ -404,8 +403,8 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
         }
 
         @Override
-        public void appMessage(String message) {
-
+        public void appMessage(String address, byte[] data) {
+            Log.v(TAG, "got app message " + new String(data));
         }
     }
 
@@ -464,7 +463,7 @@ public class SetupServerActivity extends AppCompatActivity implements BlueToothS
             Log.v(TAG, "onPrepareActionMode: " + mAddress);
             mRecyclerAdapter.setSelectedItemAddress(mAddress);
 
-            mActionMode.setTitle(mSocket.getRemoteDevice().getName());
+            mode.setTitle(mSocket.getRemoteDevice().getName());
 
             MenuItem item = menu.findItem(R.id.menu_swap);
 

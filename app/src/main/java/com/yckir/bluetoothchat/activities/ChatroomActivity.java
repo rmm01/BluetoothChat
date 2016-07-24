@@ -1,5 +1,6 @@
 package com.yckir.bluetoothchat.activities;
 
+import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -40,6 +41,8 @@ public class ChatroomActivity extends AppCompatActivity {
     private BluetoothService.BluetoothBinder mBinder;
     private MyBluetoothHandler mBT_Handler;
 
+    private String mName;
+    private String mAddress;
     private boolean mConnected;
     private boolean mIsServer;
 
@@ -65,18 +68,24 @@ public class ChatroomActivity extends AppCompatActivity {
         }
 
         @Override
-        public void appMessage(String message) {
-            String messageId = (message.substring(0, ChatroomUtility.ID_LENGTH));
+        public void appMessage(String address, byte[] data) {
+            String msg = new String(data);
+            if(data.length < ChatroomUtility.ID_LENGTH){
+                Log.w(TAG, "unreadable message " + msg);
+                return;
+            }
+
+            String messageId = (msg.substring(0, ChatroomUtility.ID_LENGTH));
             String messageData = "";
-            if( message.length() > ChatroomUtility.ID_LENGTH )
-                messageData = message.substring(ChatroomUtility.ID_LENGTH, message.length());
+            if( msg .length() > ChatroomUtility.ID_LENGTH )
+                messageData = msg.substring(ChatroomUtility.ID_LENGTH, msg.length());
 
             switch (messageId){
                 case ChatroomUtility.ID_SEND_DISPLAY_TEXT:
                     mActivity.get().showMessage(messageData);
                     if(mActivity.get().mIsServer) {
                         String appMessage = ChatroomUtility.makeDisplayTextMessage(messageData);
-                        mActivity.get().mBinder.writeMessage(ServiceUtility.makeAppMessage(appMessage));
+                        mActivity.get().mBinder.writeMessage(appMessage.getBytes());
                     }
                     break;
                 default:
@@ -95,7 +104,7 @@ public class ChatroomActivity extends AppCompatActivity {
             mBinder.setHandler(mBT_Handler);
 
             if(mIsServer) {
-                mBinder.writeMessage(ServiceUtility.makeServerSetupFinishedMessage());
+                mBinder.serverReady();
             }
         }
 
@@ -116,6 +125,10 @@ public class ChatroomActivity extends AppCompatActivity {
 
         mIsServer = getIntent().getBooleanExtra(EXTRA_SERVER, false);
 
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        mName = adapter.getName();
+        mAddress = adapter.getAddress();
+
         mTextView = (TextView) findViewById(R.id.conversation);
         mEditText = (EditText) findViewById(R.id.send_text);
 
@@ -127,12 +140,13 @@ public class ChatroomActivity extends AppCompatActivity {
                     Snackbar.make(view, "sending message", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                     String text = mEditText.getText().toString();
+                    String message = "\n-----"+mName+"\n" + text + "\n-----\n";
                     if(mConnected) {
-                        String chatMessage = ChatroomUtility.makeDisplayTextMessage(text);
-                        mBinder.writeMessage(ServiceUtility.makeAppMessage( chatMessage ));
+                        String chatMessage = ChatroomUtility.makeDisplayTextMessage(message);
+                        mBinder.writeMessage(chatMessage.getBytes());
                     }
                     if(mIsServer)
-                        mTextView.append("\n-----YOU\n" + text + "\n-----\n");
+                        showMessage(message);
                 }
             });
         }
@@ -159,6 +173,6 @@ public class ChatroomActivity extends AppCompatActivity {
      * @param message the message that will be displayed.
      */
     public void showMessage(String message) {
-        mTextView.append("\n-----THEM\n" + message + "\n-----\n");
+        mTextView.append(message);
     }
 }

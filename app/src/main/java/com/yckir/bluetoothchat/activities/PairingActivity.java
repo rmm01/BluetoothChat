@@ -487,18 +487,8 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
         }
 
         @Override
-        public void appMessage(String message) {
-            String message_id = (message.substring(0, ServiceUtility.LENGTH_ID));
-
-            String messageData = null;
-            if(message.length() > ChatroomUtility.ID_LENGTH)
-                messageData = message.substring(ServiceUtility.LENGTH_ID, message.length());
-
-            switch (message_id) {
-                default:
-                    Log.v(TAG, " unknown app message id " + message_id + ", with message " + messageData);
-                    break;
-            }
+        public void appMessage(String address, byte[] data) {
+            Log.v(TAG, "got app message " + new String(data));
         }
     }
 
@@ -510,7 +500,6 @@ public class PairingActivity extends AppCompatActivity implements BluetoothStatu
             mServiceConnected = true;
             mBinder = (BluetoothService.BluetoothBinder ) service;
             mBinder.setHandler(mHandler);
-            mBinder.setDeviceInfo(mBluetoothAdapter.getName(), mBluetoothAdapter.getAddress());
         }
 
         @Override
